@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockProfit10 - 監視条件指定</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 800px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        h1 .back-button { font-size: 16px; background-color: #6c757d; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }
+        h1 .back-button:hover { background-color: #5a6268; }
+        .section-title { font-size: 22px; color: #34495e; margin-top: 30px; margin-bottom: 15px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+        .condition-group { background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 20px; margin-bottom: 25px; }
+        .condition-group h3 { margin-top: 0; color: #34495e; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; display: flex; flex-wrap: wrap; align-items: center; }
+        .form-group label { flex: 0 0 150px; margin-right: 15px; font-weight: bold; color: #555; }
+        .form-group input[type="number"],
+        .form-group select {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .form-group .unit { margin-left: 10px; color: #555; }
+        .checkbox-group { display: flex; align-items: center; margin-bottom: 10px; }
+        .checkbox-group input[type="checkbox"] { margin-right: 10px; transform: scale(1.2); }
+        .checkbox-group label { margin: 0; font-weight: normal; }
+        .button { background-color: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background-color 0.3s ease; display: block; width: fit-content; margin-top: 20px; }
+        .button:hover { background-color: #0056b3; }
+        .footer-nav { margin-top: 30px; text-align: center; }
+        .footer-nav a { color: #007bff; text-decoration: none; margin: 0 15px; font-size: 15px; }
+        .footer-nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            監視条件指定
+            <button class="back-button" onclick="location.href='portfolio_detail.html?id=1'">ポートフォリオ詳細へ戻る</button>
+        </h1>
+        <p style="color: #666; margin-top: -15px; margin-bottom: 25px;">売買推奨シグナルを生成するための条件を設定します。</p>
+
+        <div class="condition-group">
+            <h3>買いシグナル条件</h3>
+            <div class="checkbox-group">
+                <input type="checkbox" id="buy-golden-cross" checked>
+                <label for="buy-golden-cross">20日移動平均線が60日移動平均線を上回る（ゴールデンクロス）</label>
+            </div>
+            <div class="form-group">
+                <label for="buy-price-increase">株価が指定期間で上昇:</label>
+                <input type="number" id="buy-price-increase" value="3" min="1">
+                <span class="unit">日</span>
+                <input type="number" id="buy-price-increase-percent" value="3.0" step="0.1" min="0">
+                <span class="unit">%以上</span>
+            </div>
+            <div class="form-group">
+                <label for="buy-volume-threshold">出来高が基準値以上:</label>
+                <input type="number" id="buy-volume-threshold" value="500000" min="0">
+                <span class="unit">株</span>
+            </div>
+            <div class="form-group">
+                <label for="buy-10-percent-gain">購入価格から目標キャピタルゲイン率:</label>
+                <input type="number" id="buy-10-percent-gain" value="10" step="0.1" min="0.1">
+                <span class="unit">%アップ</span>
+            </div>
+        </div>
+
+        <div class="condition-group">
+            <h3>売りシグナル条件</h3>
+            <div class="checkbox-group">
+                <input type="checkbox" id="sell-dead-cross">
+                <label for="sell-dead-cross">20日移動平均線が60日移動平均線を下回る（デッドクロス）</label>
+            </div>
+            <div class="form-group">
+                <label for="sell-price-decrease">株価が指定期間で下降:</label>
+                <input type="number" id="sell-price-decrease" value="3" min="1">
+                <span class="unit">日</span>
+                <input type="number" id="sell-price-decrease-percent" value="5.0" step="0.1" min="0">
+                <span class="unit">%以上</span>
+            </div>
+            <div class="form-group">
+                <label for="sell-10-percent-loss">購入価格から損失許容率:</label>
+                <input type="number" id="sell-10-percent-loss" value="10" step="0.1" min="0.1">
+                <span class="unit">%ダウン</span>
+            </div>
+            <div class="form-group">
+                <label for="sell-profit-target">利益確定目標:</label>
+                <input type="number" id="sell-profit-target" value="10" step="0.1" min="0.1">
+                <span class="unit">%アップ</span>
+            </div>
+        </div>
+
+        <button class="button" onclick="alert('監視条件を保存しました！')">条件を保存</button>
+
+        <div class="footer-nav">
+            <a href="#">メイン画面へ</a> |
+            <a href="#">ポートフォリオ一覧</a> |
+            <a href="#">通知確認</a>
+        </div>
+    </div>
+</body>
+</html>

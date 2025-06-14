@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockProfit10 - ポートフォリオ詳細</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 1000px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        h1 .back-button { font-size: 16px; background-color: #6c757d; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }
+        h1 .back-button:hover { background-color: #5a6268; }
+        .section-title { font-size: 22px; color: #34495e; margin-top: 30px; margin-bottom: 15px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+        .button-group { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+        .button { background-color: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background-color 0.3s ease; }
+        .button:hover { background-color: #0056b3; }
+        .button.add { background-color: #28a745; }
+        .button.add:hover { background-color: #218838; }
+        .button.settings { background-color: #ffc107; color: #333; }
+        .button.settings:hover { background-color: #e0a800; }
+        .stock-list { margin-top: 20px; }
+        .stock-item { background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; padding: 15px 20px; display: flex; flex-direction: column; gap: 8px; }
+        .stock-header { display: flex; justify-content: space-between; align-items: center; }
+        .stock-header h3 { margin: 0; color: #34495e; font-size: 18px; }
+        .stock-header .stock-actions { display: flex; gap: 8px; }
+        .stock-header .delete-button { background-color: #dc3545; padding: 8px 12px; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 14px; }
+        .stock-header .delete-button:hover { background-color: #c82333; }
+        .stock-details { display: flex; justify-content: space-between; align-items: flex-start; font-size: 14px; color: #555; }
+        .stock-details div { flex: 1; min-width: 150px; }
+        .stock-details p { margin: 3px 0; }
+        .stock-details strong { color: #333; }
+        .chart-placeholder { background-color: #e9ecef; border-radius: 8px; height: 300px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 1.2em; margin-top: 20px; }
+        .stock-status-buy { color: #28a745; font-weight: bold; }
+        .stock-status-sell { color: #dc3545; font-weight: bold; }
+        .stock-status-neutral { color: #007bff; font-weight: bold; }
+        .footer-nav { margin-top: 30px; text-align: center; }
+        .footer-nav a { color: #007bff; text-decoration: none; margin: 0 15px; font-size: 15px; }
+        .footer-nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            私の成長ポートフォリオ
+            <button class="back-button" onclick="location.href='portfolio_list.html'">ポートフォリオ一覧へ戻る</button>
+        </h1>
+        <p style="color: #666; margin-top: -15px; margin-bottom: 25px;">長期保有でキャピタルゲイン狙い。テクノロジー株が中心。</p>
+
+        <div class="button-group">
+            <button class="button add" onclick="alert('監視株追加モーダルを表示')">＋ 監視株を追加</button>
+            <button class="button" onclick="alert('シミュレーション買設定画面へ遷移')">シミュレーション買設定</button>
+            <button class="button" onclick="alert('シミュレーション売設定画面へ遷移')">シミュレーション売設定</button>
+            <button class="button settings" onclick="alert('ポートフォリオ条件指定画面へ遷移')">ポートフォリオ条件設定</button>
+            <button class="button settings" onclick="alert('ポートフォリオ詳細設定画面へ遷移')">ポートフォリオ詳細設定</button>
+        </div>
+
+        <div class="section-title">監視中の銘柄</div>
+        <div class="stock-list">
+            <div class="stock-item">
+                <div class="stock-header">
+                    <h3>ソニーグループ (6758)</h3>
+                    <div class="stock-actions">
+                        <span class="stock-status-buy">買いシグナル発生中！</span>
+                        <button class="delete-button" onclick="confirm('この銘柄をポートフォリオから削除しますか？')">削除</button>
+                    </div>
+                </div>
+                <div class="stock-details">
+                    <div>
+                        <p>現在株価: <strong>14,500円</strong> (前日比: +2.5%)</p>
+                        <p>購入目安: 14,000円 (目標+10%: 15,400円)</p>
+                    </div>
+                    <div>
+                        <p>20日移動平均: 14,200円</p>
+                        <p>60日移動平均: 13,800円</p>
+                    </div>
+                    <div>
+                        <p>直近出来高: 3,500,000株</p>
+                        <p>追加日: 2024/05/20</p>
+                    </div>
+                </div>
+                <div class="chart-placeholder">株価チャート (過去3ヶ月)</div>
+            </div>
+
+            <div class="stock-item">
+                <div class="stock-header">
+                    <h3>トヨタ自動車 (7203)</h3>
+                    <div class="stock-actions">
+                        <span class="stock-status-sell">売りシグナル発生中！ (購入時より-10%)</span>
+                        <button class="delete-button" onclick="confirm('この銘柄をポートフォリオから削除しますか？')">削除</button>
+                    </div>
+                </div>
+                <div class="stock-details">
+                    <div>
+                        <p>現在株価: <strong>3,450円</strong> (前日比: -1.2%)</p>
+                        <p>購入目安: 3,800円 (目標+10%: 4,180円)</p>
+                    </div>
+                    <div>
+                        <p>20日移動平均: 3,500円</p>
+                        <p>60日移動平均: 3,600円</p>
+                    </div>
+                    <div>
+                        <p>直近出来高: 12,000,000株</p>
+                        <p>追加日: 2024/04/15</p>
+                    </div>
+                </div>
+                <div class="chart-placeholder">株価チャート (過去3ヶ月)</div>
+            </div>
+
+            <div class="stock-item">
+                <div class="stock-header">
+                    <h3>任天堂 (7974)</h3>
+                    <div class="stock-actions">
+                        <span class="stock-status-neutral">条件監視中</span>
+                        <button class="delete-button" onclick="confirm('この銘柄をポートフォリオから削除しますか？')">削除</button>
+                    </div>
+                </div>
+                <div class="stock-details">
+                    <div>
+                        <p>現在株価: <strong>8,500円</strong> (前日比: +0.5%)</p>
+                        <p>購入目安: 8,000円 (目標+10%: 8,800円)</p>
+                    </div>
+                    <div>
+                        <p>20日移動平均: 8,400円</p>
+                        <p>60日移動平均: 8,300円</p>
+                    </div>
+                    <div>
+                        <p>直近出来高: 1,800,000株</p>
+                        <p>追加日: 2024/05/01</p>
+                    </div>
+                </div>
+                <div class="chart-placeholder">株価チャート (過去3ヶ月)</div>
+            </div>
+
+            </div>
+
+        <div class="footer-nav">
+            <a href="#">メイン画面へ</a> |
+            <a href="#">ユーザー設定</a> |
+            <a href="#">通知確認</a>
+        </div>
+    </div>
+</body>
+</html>

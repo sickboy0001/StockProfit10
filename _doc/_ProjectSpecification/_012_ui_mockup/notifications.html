@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockProfit10 - 通知確認</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 800px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        h1 .back-button { font-size: 16px; background-color: #6c757d; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }
+        h1 .back-button:hover { background-color: #5a6268; }
+        .notification-actions { margin-bottom: 20px; text-align: right; }
+        .notification-actions .button { background-color: #6c757d; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: background-color 0.3s ease; }
+        .notification-actions .button:hover { background-color: #5a6268; }
+        .notification-list { list-style: none; padding: 0; }
+        .notification-item { background-color: #fff; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; padding: 15px 20px; display: flex; align-items: flex-start; gap: 15px; cursor: pointer; transition: background-color 0.2s ease, box-shadow 0.2s ease; }
+        .notification-item:hover { background-color: #f0f0f0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .notification-item.unread { background-color: #e6f7ff; border-color: #a6e3ff; } /* 未読の背景色 */
+        .notification-item.unread:hover { background-color: #d9f0f9; }
+        .notification-item.unread .status-dot { background-color: #007bff; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: #ccc; margin-top: 5px; flex-shrink: 0; } /* 既読/未読を示す点 */
+        .notification-content { flex-grow: 1; }
+        .notification-content h2 { margin: 0 0 5px 0; font-size: 18px; color: #34495e; }
+        .notification-content p { margin: 0; font-size: 14px; color: #666; line-height: 1.5; }
+        .notification-date { font-size: 12px; color: #999; text-align: right; flex-shrink: 0; }
+        .no-notifications { text-align: center; color: #777; padding: 50px 0; font-size: 1.1em; }
+        .footer-nav { margin-top: 30px; text-align: center; }
+        .footer-nav a { color: #007bff; text-decoration: none; margin: 0 15px; font-size: 15px; }
+        .footer-nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            通知確認
+            <button class="back-button" onclick="location.href='main.html'">メイン画面へ戻る</button>
+        </h1>
+
+        <div class="notification-actions">
+            <button class="button" onclick="alert('全ての通知を既読にしました。')">全て既読にする</button>
+        </div>
+
+        <ul class="notification-list">
+            <li class="notification-item unread" onclick="alert('通知の詳細を表示：ソニーグループ買いシグナル')">
+                <div class="status-dot"></div>
+                <div class="notification-content">
+                    <h2>ソニーグループ (6758) 買いシグナル発生！</h2>
+                    <p>本日、ソニーグループの株価が上昇傾向にあり、買いシグナルが点灯しました。</p>
+                </div>
+                <div class="notification-date">2024/06/05 15:00</div>
+            </li>
+            <li class="notification-item unread" onclick="alert('通知の詳細を表示：トヨタ自動車売りシグナル')">
+                <div class="status-dot"></div>
+                <div class="notification-content">
+                    <h2>トヨタ自動車 (7203) 売りシグナル発生！</h2>
+                    <p>設定した購入時より10%ダウンしたため、売りシグナルが点灯しました。</p>
+                </div>
+                <div class="notification-date">2024/06/05 09:30</div>
+            </li>
+            <li class="notification-item" onclick="alert('通知の詳細を表示：ポートフォリオ設定更新')">
+                <div class="status-dot"></div>
+                <div class="notification-content">
+                    <h2>ポートフォリオ「私の成長ポートフォリオ」設定更新</h2>
+                    <p>ポートフォリオの設定が更新されました。</p>
+                </div>
+                <div class="notification-date">2024/06/03 18:45</div>
+            </li>
+            <li class="notification-item" onclick="alert('通知の詳細を表示：新規銘柄追加')">
+                <div class="status-dot"></div>
+                <div class="notification-content">
+                    <h2>新規銘柄追加のお知らせ</h2>
+                    <p>ポートフォリオ「配当重視ポートフォリオ」に新規銘柄が追加されました。</p>
+                </div>
+                <div class="notification-date">2024/06/01 10:00</div>
+            </li>
+            </ul>
+
+        <div class="footer-nav">
+            <a href="#">メイン画面へ</a> |
+            <a href="#">ポートフォリオ一覧</a> |
+            <a href="#">ユーザー設定</a>
+        </div>
+    </div>
+</body>
+</html>

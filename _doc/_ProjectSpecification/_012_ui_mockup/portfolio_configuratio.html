@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockProfit10 - ポートフォリオ設定</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 700px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        h1 .back-button { font-size: 16px; background-color: #6c757d; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }
+        h1 .back-button:hover { background-color: #5a6268; }
+        .section-title { font-size: 22px; color: #34495e; margin-top: 30px; margin-bottom: 15px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        .form-group input[type="text"],
+        .form-group textarea,
+        .form-group select {
+            width: calc(100% - 22px); /* Padding + Border */
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        textarea { resize: vertical; min-height: 80px; }
+        .button { background-color: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background-color 0.3s ease; display: block; width: fit-content; margin-top: 30px; }
+        .button:hover { background-color: #0056b3; }
+        .delete-section { margin-top: 50px; padding-top: 20px; border-top: 1px dashed #e0e0e0; text-align: center; }
+        .delete-button { background-color: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: background-color 0.3s ease; }
+        .delete-button:hover { background-color: #c82333; }
+        .footer-nav { margin-top: 30px; text-align: center; }
+        .footer-nav a { color: #007bff; text-decoration: none; margin: 0 15px; font-size: 15px; }
+        .footer-nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            ポートフォリオ詳細設定
+            <button class="back-button" onclick="location.href='portfolio_detail.html?id=1'">ポートフォリオ詳細へ戻る</button>
+        </h1>
+        <p style="color: #666; margin-top: -15px; margin-bottom: 25px;">このポートフォリオの基本的な情報や表示に関する設定を行います。</p>
+
+        <div class="section-title">基本情報</div>
+
+        <div class="form-group">
+            <label for="portfolio-name">ポートフォリオ名:</label>
+            <input type="text" id="portfolio-name" value="私の成長ポートフォリオ" placeholder="ポートフォリオ名を入力">
+        </div>
+
+        <div class="form-group">
+            <label for="portfolio-memo">ポートフォリオメモ:</label>
+            <textarea id="portfolio-memo" placeholder="このポートフォリオに関するメモや目標などを入力してください。">長期保有でキャピタルゲイン狙い。テクノロジー株が中心。</textarea>
+        </div>
+
+        <div class="section-title">表示設定</div>
+
+        <div class="form-group">
+            <label for="display-order">ポートフォリオ表示順:</label>
+            <input type="number" id="display-order" value="1" min="0">
+            <p style="font-size: 0.9em; color: #777;">ポートフォリオ一覧画面での表示順（小さいほど上位に表示されます）。</p>
+        </div>
+
+        <div class="form-group">
+            <label for="stock-display-order">銘柄表示順:</label>
+            <select id="stock-display-order">
+                <option value="added_at_desc">追加日（新しい順）</option>
+                <option value="added_at_asc">追加日（古い順）</option>
+                <option value="code_asc">銘柄コード順（昇順）</option>
+                <option value="code_desc">銘柄コード順（降順）</option>
+                <option value="custom">カスタム順（ドラッグ&ドロップなど）</option>
+            </select>
+            <p style="font-size: 0.9em; color: #777;">このポートフォリオ内の銘柄の表示順を設定します。</p>
+        </div>
+
+        <div class="form-group">
+            <label for="group-name">グループ名で絞り込み:</label>
+            <input type="text" id="group-name" placeholder="例: テック株, 成長株">
+            <p style="font-size: 0.9em; color: #777;">指定したグループ名の銘柄のみを表示します。（複数指定は今後対応予定）</p>
+        </div>
+
+        <button class="button" onclick="alert('ポートフォリオ設定を保存しました！')">設定を保存</button>
+
+        <div class="delete-section">
+            <p style="color: #dc3545; font-weight: bold;">危険な操作:</p>
+            <button class="delete-button" onclick="confirm('このポートフォリオを完全に削除してもよろしいですか？この操作は元に戻せません。')">このポートフォリオを削除</button>
+        </div>
+
+        <div class="footer-nav">
+            <a href="#">メイン画面へ</a> |
+            <a href="#">ポートフォリオ一覧</a> |
+            <a href="#">通知確認</a>
+        </div>
+    </div>
+</body>
+</html>

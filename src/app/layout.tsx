@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Header } from "@/components/organisms/Header";
+import { AuthProvider } from "@/contexts/AuthContext"; // ★ AuthProvider をインポート
+
+import { Toaster } from "sonner"; // ★ sonnerのToasterをインポート
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +31,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        {/* ★ QueryClientプロバイダーでラップ */}
+        <AuthProvider>
+          {/* ★ AuthProvider でラップ */}
+          <Header /> {/* ヘッダーコンポーネントをここに追加 */}
+          <main className="flex-grow container mx-auto px-4">
+            {/* メインコンテンツ用のラッパーを追加 (任意) */}
+            {children}
+            <Toaster /> {/* ★ Toaster を追加 */}
+          </main>
+          <footer className="border-t py-4 text-center text-sm text-muted-foreground">
+            © 2025 Hadbit
+          </footer>
+        </AuthProvider>
       </body>
     </html>
   );

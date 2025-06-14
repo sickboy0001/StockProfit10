@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>&#x30d7;&#x30ed;&#x30b8;&#x30a7;&#x30af;&#x30c8;&#x5b9a;&#x7fa9;&#x66f8;&lpar;ProjectSpecification&rpar;</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="./markdown.css">
+<link rel="stylesheet" href="./highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="プロジェクト定義書projectspecification">プロジェクト定義書(ProjectSpecification)</h1>
+<h2 id="要求の背景目的">■要求の背景・目的</h2>
+<h3 id="システム開発の目的">◆システム開発の目的</h3>
+<p>保守業務内のサーバーの状況把握のためのサーバーチェック履歴（srvSSIChkServer）、サーバーチェック（SSISrvChkSearch）のWeb化。<br>
+利用の容易さ、再利用の容易性、VB6等のリスクを考慮に入れてのWeb化とする。<br>
+作業自体の容易化や、コスト低下のための施行も継続して検討<br>
+Webではサポートできない項目については、各々の処理との連携は視野に入れる。</p>
+<h3 id="前提条件制約条件対象範囲">◆前提条件・制約条件・対象範囲</h3>
+<h4 id="前提条件">▼前提条件</h4>
+<ul>
+<li>当社における保守業務内で、サーバー状況の自動的なチェックを行っている。</li>
+<li>その中で、疑義のる状況を確認するためのツールの作成になる。</li>
+<li>ログの再取得、安易なリモートチェック、必要に応じてSSIUcmanagerの記録なども行う</li>
+<li>他既存の社内システム（SSICRM？JOBLIST？）などとの連携も行う。</li>
+<li>■要追記</li>
+</ul>
+<h4 id="制約条件">▼制約条件</h4>
+<ul>
+<li>2025年4月末までである程度の出来上がりを目指す。</li>
+<li>継続して複数人でメンテナンスできる体制を求めるため、TeamFundationServer（TFS）を利用する</li>
+<li>他システムとの連携については、別途作成する。</li>
+</ul>
+<h4 id="プロジェクトスコープ">▼プロジェクトスコープ</h4>
+<ul>
+<li>現行のアプリケーション（srvSSIChkserver SSISrvChkSeach）の代わりに利用することを目標とする。</li>
+<li>サーバーチェックの大きなフローは更新しない。</li>
+<li>UIの部分のみを更新する</li>
+<li>DB/Table構造は現行のまま利用する。</li>
+<li>既存UIにない機能など、DBに依存しないものは積極的に対応する。</li>
+<li>下記については対象外とする
+<ul>
+<li>要求発生時の取得についてはsrvSSIChkServerを呼び出し、そちらから行う</li>
+<li>既存の病院情報のタイマーでの取得については更新しない。</li>
+<li>JOBのデータ登録については既存のJOBLISTへの送信を行うものとする。</li>
+</ul>
+</li>
+</ul>
+<h3 id="用語定義">◆用語定義</h3>
+<table>
+<thead>
+<tr>
+<th>用語</th>
+<th>定義・説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>サーバーチェック</td>
+<td>各ユーザーで稼働中のユーザーのオンプレサーバーの日々のチェックを行うもの</td>
+</tr>
+<tr>
+<td>ユーザー</td>
+<td>各病院を想定</td>
+</tr>
+</tbody>
+</table>
+<h4 id="現行アプリの機能">▼現行アプリの機能</h4>
+<table>
+<thead>
+<tr>
+<th>日本語名</th>
+<th>Exe名</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>サーバーチェック履歴</td>
+<td>srvSSIChkServer</td>
+<td>サーバー単位での情報の確認、及び要求されたとき（サーバーとして呼び出されたとき）ユーザーのサーバー情報を社内にとりこむ</td>
+</tr>
+<tr>
+<td>サーバーチェック</td>
+<td>SSISrvChkSearch</td>
+<td>複数ユーザー対象で、グループ化されたチェックを表示する。チェック対象項目、チェック対象ユーザー指定（複数）は可能</td>
+</tr>
+<tr>
+<td>サーバーチェックパターンマスタメンテナンス</td>
+<td>SSChkServerPtnMnt</td>
+<td>社内取り込み済みのデータに対して、サーバーの正常性を確認し、チェックする条件の指定</td>
+</tr>
+<tr>
+<td>ピンクスライム</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>チェック処理</td>
+<td></td>
+<td>パターンマスタメンテナンスで登録されたデータをもとに、社内の各ユーザーのサーバーログ、情報を確認し、問題ないかを確認。問題があった時には、ｘｘｘに保存</td>
+</tr>
+</tbody>
+</table>
+<h4 id="サーバーチェックの流れ">▼サーバーチェックの流れ</h4>
+<ol>
+<li>ユーザー環境：各サーバー：タスクでサーバーの状況ログとして、ファイルサーバーなど指定された場所に保存</li>
+<li>社内：ピンクスライム：定期タスク（１日回）として、全ユーザー対象で実行する。
+<ol>
+<li>ピンクスライム：ポートオープン</li>
+<li>サーバーチェック履歴（srvSSIChkServer）：ユーザーのサーバー上に保存された、ログを取得</li>
+<li>サーバーチェック履歴（srvSSIChkServer）：社内に保存</li>
+<li>社内のデータベースに保存</li>
+<li>社内のデータベースの情報をもとにチェックする。</li>
+<li>ピンクスライム：ポートクローズ</li>
+</ol>
+</li>
+<li>社内：サーバーチェック（SSISrvChkSearch）：登録されたサーバーチェックの状態を確認して、必要に応じてJOBを立てる対応する。</li>
+</ol>
+<h3 id="テーブルデザイン">◆テーブルデザイン</h3>
+<hr>
+<p>例）</p>
+<hr>
+<h3 id="遵法性">◆遵法性</h3>
+<table>
+<thead>
+<tr>
+<th>法律・基準・標準等</th>
+<th>説明</th>
+<th>優先度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>個人情報保護法</td>
+<td>ユーザーの情報は顧客情報にあたるので個人情報に適合する、社外への持ち出し公開などは問題がある</td>
+<td>高</td>
+</tr>
+<tr>
+<td>他にないか検討必用</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="業務要件の定義">■業務要件の定義</h2>
+<h3 id="ステークホルダー一覧本開発に関して要求元となりうるもの">◆ステークホルダー一覧（本開発に関して要求元となりうるもの）</h3>
+<table>
+<thead>
+<tr>
+<th>ステークホルダー名</th>
+<th>説明</th>
+<th>優先度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>清政</td>
+<td>システム利用部署の部長</td>
+<td>高</td>
+</tr>
+<tr>
+<td>桝</td>
+<td>該当システムの提案者・疑義発信者</td>
+<td>高</td>
+</tr>
+<tr>
+<td>大塚</td>
+<td>現行システムを利用するメンバーの上長</td>
+<td>高</td>
+</tr>
+</tbody>
+</table>
+<h3 id="アクター一覧本開発が対象とする業務に関わるもの">◆アクター一覧（本開発が対象とする業務に関わるもの）</h3>
+<table>
+<thead>
+<tr>
+<th>アクタ―名</th>
+<th>説明</th>
+<th>優先度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>インフラソリューション部保守メンバー</td>
+<td>サーバー保守作業を行う</td>
+<td>高</td>
+</tr>
+<tr>
+<td>業務連携Ｔ</td>
+<td>システムのメンテナンス</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="業務一覧">◆業務一覧</h3>
+<p><a href="./_001_worklist/readme.html">別紙</a>参照</p>
+<h3 id="業務フローユースケース">◆業務フロー・ユースケース</h3>
+<p><a href="./_011_workflow/readme.html">別紙</a>参照</p>
+<h2 id="機能要件の定義">■機能要件の定義</h2>
+<h3 id="機能開発全体方針">◆機能開発全体方針</h3>
+<hr>
+<p>例）</p>
+<table>
+<thead>
+<tr>
+<th>項番</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>開発言語はC# 7.3、.net Framework 4.6.1を採用する</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ソース管理（基盤）は ssipuffine/Infrastructure/SSISvrChkHist/SSISvrChkHist で行う</td>
+</tr>
+<tr>
+<td>3</td>
+<td>プロジェクト管理は<a href="http://ssipuffin:8080/tfs/infrastructure/SSISvrChkHist/SSISvrChkHist%20%E3%83%81%E3%83%BC%E3%83%A0">TFS</a>で行う</td>
+</tr>
+<tr>
+<td>4</td>
+<td>32bit端末でも動作可能にする。（N2.2アプリは「AnyCPU」「32ビットを優先」でOK）</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="システム構成">◆システム構成</h3>
+<p><a href="./_021_SystemConfiguration/_021_SystemConfiguration.html">こちら</a>参照</p>
+<h4 id="開発環境">▼開発環境</h4>
+<p>■開発環境</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>項目</th>
+<th>ソフトウェア名、バージョン等</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>OS</td>
+<td>Edition:Window 10 Pro / バージョン:1607 以降 / 32-bit or 64-bit</td>
+</tr>
+<tr>
+<td>2</td>
+<td>開発言語</td>
+<td>C#（7.3）</td>
+</tr>
+<tr>
+<td>3</td>
+<td>フレームワーク</td>
+<td>.net Framework 4.6.1</td>
+</tr>
+<tr>
+<td>4</td>
+<td>開発ツール</td>
+<td>Visual Studio Professional 2017</td>
+</tr>
+<tr>
+<td>5</td>
+<td>設定ファイルの入手※</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="ハードウェア構成">▼ハードウェア構成</h4>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>項目</th>
+<th>配置場所</th>
+<th>構成</th>
+<th>役割など</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>ユーザー</td>
+<td>サーバー</td>
+<td></td>
+<td>システムのサーバー各種（FS,DBなど含む）</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ユーザー</td>
+<td>ファイルサーバー</td>
+<td></td>
+<td>ユーザー環境内にあるファイルサーバー（FS）</td>
+</tr>
+<tr>
+<td>3</td>
+<td>社内・DMZ</td>
+<td>アプリサーバー</td>
+<td></td>
+<td>定期的に起動するアプリが配置されている。<BR> 病院のFSに配置されたログファイル群を改修し、社内のｘｘに保存する</td>
+</tr>
+<tr>
+<td>4</td>
+<td>社内</td>
+<td>アプリサーバー</td>
+<td></td>
+<td>ＸＸに保存されたファイルを社内のＺドライブに保存</td>
+</tr>
+<tr>
+<td>5</td>
+<td>社内</td>
+<td>アプリサーバー</td>
+<td></td>
+<td>Ｚドライブから「<strong>srvSrvChkPtn</strong>」を呼び出し、テーブルなどに保存する。</td>
+</tr>
+<tr>
+<td>6</td>
+<td>社内</td>
+<td>ログ保存場所</td>
+<td></td>
+<td>Zドライブ保存場所</td>
+</tr>
+<tr>
+<td>7</td>
+<td>社内</td>
+<td>DBサーバー(SSIEAGLE/ssiutydb)</td>
+<td></td>
+<td>日々のログの保存、「<strong>srvSrvChkPtn</strong>」での分析結果の保存</td>
+</tr>
+<tr>
+<td>8</td>
+<td>社内</td>
+<td>DBサーバー(SSIEAGLE/ssiub)</td>
+<td></td>
+<td>顧客DB（SSICRM)などの情報</td>
+</tr>
+<tr>
+<td>9</td>
+<td>社内</td>
+<td>クライアント</td>
+<td></td>
+<td>サーバーチェックアプリの稼働</td>
+</tr>
+<tr>
+<td>19</td>
+<td>社内</td>
+<td>IISサーバー(ssicicade)</td>
+<td></td>
+<td>サーバーチェックアプリのWeb版の起動サイト</td>
+</tr>
+</tbody>
+</table>
+<h4 id="ルーターなければ不要">▼ルーター（なければ不要）</h4>
+<hr>
+<p>例）
+※1　ルーター（病院-SSI間：SSI側）</p>
+<table>
+<thead>
+<tr>
+<th>通信元</th>
+<th>送信先</th>
+<th>ポート</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>病院の保守セグメン例)10.28.0.0/22 (AIZAWA)</td>
+<td>10.1.253.217</td>
+<td>TCP</td>
+<td>3870</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="サーバ構成電カルdbサーバドメコンサーバ">▼サーバ構成（電カルDBサーバ、ドメコンサーバ）</h4>
+<hr>
+<p>例）</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>項目</th>
+<th>ソフトウェア名、バージョン等</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>OS</td>
+<td>既存のN2.2電子カルテ環境に準拠</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ミドルウェア</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>アプリケーション</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="サーバ構成webサーバ院内プロキシ用">▼サーバ構成（WEBサーバ：院内プロキシ用）</h4>
+<h4 id="サーバ構成webサーバ社内プロキシ用">▼サーバ構成（WEBサーバ：社内プロキシ用）</h4>
+<h4 id="サーバ構成webサーバawsクラウド内">▼サーバ構成（WEBサーバ：AWSクラウド内）</h4>
+<hr>
+<p>例）
+先進技術側で開発したサマリ生成用のシステム（API）が配置されています。
+AWS内のFargateというところで起動しています。OSはLinux、開発言語はpythonです。</p>
+<hr>
+<h4 id="クライアント構成業務端末現行">▼クライアント構成（業務端末・現行）</h4>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>項目</th>
+<th>ソフトウェア名、バージョン等</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>OS</td>
+<td>VB6アプリの動く環境、社内の各種ツールが動く環境</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ミドルウェア</td>
+<td>上記に準拠</td>
+</tr>
+<tr>
+<td>3</td>
+<td>アプリケーション</td>
+<td>各種アプリ（SSIUcManger,SSICRM,JOBList,SSISrvChkSearch、srvSSIChkServerなど</td>
+</tr>
+</tbody>
+</table>
+<h4 id="クライアント構成業務端末更新後">▼クライアント構成（業務端末・更新後）</h4>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>項目</th>
+<th>ソフトウェア名、バージョン等</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>OS</td>
+<td>不問・Chrome Edgeが動く</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ミドルウェア</td>
+<td>上記に準拠</td>
+</tr>
+</tbody>
+</table>
+<h4 id="クライアント構成常駐端末">▼クライアント構成（常駐端末）</h4>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>項目</th>
+<th>ソフトウェア名、バージョン等</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>OS</td>
+<td>VB6アプリの動く環境、社内の各種ツールが動く環境</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ミドルウェア</td>
+<td>上記に準拠</td>
+</tr>
+<tr>
+<td>3</td>
+<td>アプリケーション</td>
+<td>各種アプリ（srvSSIChkServer etc）</td>
+</tr>
+</tbody>
+</table>
+<h4 id="クライアント構成常駐端末dmz">▼クライアント構成（常駐端末DMZ）</h4>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>項目</th>
+<th>ソフトウェア名、バージョン等</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>OS</td>
+<td>VB6アプリの動く環境、社内の各種ツールが動く環境</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ミドルウェア</td>
+<td>上記に準拠</td>
+</tr>
+<tr>
+<td>3</td>
+<td>アプリケーション</td>
+<td>各種アプリ（srvSSIChkServer etc）</td>
+</tr>
+</tbody>
+</table>
+<h4 id="機能要件一覧リンク">▼機能要件・一覧（リンク）</h4>
+<hr>
+<p>例）</p>
+<table>
+<thead>
+<tr>
+<th>システム名</th>
+<th>業務ID</th>
+<th>業務名</th>
+<th>機能ID</th>
+<th>機能名</th>
+<th>機能小項目</th>
+<th>機能概要</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ユーザー検索</td>
+<td>G001</td>
+<td>AI生成</td>
+<td>F001</td>
+<td>手動生成</td>
+<td></td>
+<td>生成AIに対して生成リクエストを投げて生成結果を電カルDBに登録する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G001</td>
+<td>AI生成</td>
+<td>F002</td>
+<td>定期生成</td>
+<td></td>
+<td>ユースケース毎のスケジュールに従って生成AIに対して生成リクエストを投げて生成結果を電カルDBに登録する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G002</td>
+<td>プロンプトメンテナンス</td>
+<td>F003</td>
+<td>プロンプト参照</td>
+<td>-</td>
+<td>ユースケース毎に生成AI連携で使用するプロンプトのマスタを参照する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G002</td>
+<td>プロンプトメンテナンス</td>
+<td>F004</td>
+<td>プロンプト登録</td>
+<td>-</td>
+<td>ユースケース毎に生成AI連携で使用するプロンプトのマスタを登録する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G002</td>
+<td>プロンプトメンテナンス</td>
+<td>F005</td>
+<td>プロンプト編集</td>
+<td>-</td>
+<td>ユースケース毎に生成AI連携で使用するプロンプトのマスタを編集する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G002</td>
+<td>プロンプトメンテナンス</td>
+<td>F006</td>
+<td>プロンプト削除</td>
+<td>-</td>
+<td>ユースケース毎に生成AI連携で使用するプロンプトのマスタを削除する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G002</td>
+<td>プロンプトメンテナンス</td>
+<td>F007</td>
+<td>プロンプト履歴確認</td>
+<td>-</td>
+<td>対象プロンプトマスタの編集履歴を確認する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G002</td>
+<td>プロンプトメンテナンス</td>
+<td>F008</td>
+<td>プロンプトインポート</td>
+<td>-</td>
+<td>登録したいプロンプトマスタを外部データからインポートする。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G002</td>
+<td>プロンプトメンテナンス</td>
+<td>F009</td>
+<td>プロンプトエクスポート</td>
+<td>-</td>
+<td>登録済のプロンプトマスタを外部データへエクスポートする。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G003</td>
+<td>スケジュールメンテナンス</td>
+<td>F010</td>
+<td>スケジュール参照</td>
+<td>-</td>
+<td>ユースケース毎に生成AI連携のバッチ処理で使用するスケジュールのマスタを参照する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G003</td>
+<td>スケジュールメンテナンス</td>
+<td>F011</td>
+<td>スケジュール登録</td>
+<td>-</td>
+<td>ユースケース毎に生成AI連携のバッチ処理で使用するスケジュールのマスタを登録する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G003</td>
+<td>スケジュールメンテナンス</td>
+<td>F012</td>
+<td>スケジュール編集</td>
+<td>-</td>
+<td>ユースケース毎に生成AI連携のバッチ処理で使用するスケジュールのマスタを編集する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>G003</td>
+<td>スケジュールメンテナンス</td>
+<td>F013</td>
+<td>スケジュール削除</td>
+<td>-</td>
+<td>ユースケース毎に生成AI連携のバッチ処理で使用するスケジュールのマスタを削除する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>GXXX</td>
+<td>※業務共通</td>
+<td>F014</td>
+<td>生成進捗確認</td>
+<td>-</td>
+<td>生成依頼したリクエストの進捗状況を確認する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>GXXX</td>
+<td>※業務共通</td>
+<td>F015</td>
+<td>生成結果確認</td>
+<td>-</td>
+<td>電子カルテDBに登録された生成結果を確認する。</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>GXXX</td>
+<td>※業務共通</td>
+<td>F016</td>
+<td>生成結果引用</td>
+<td>-</td>
+<td>電子カルテDBに登録された生成結果をサマリ入力画面に引用する。</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="画面に関する条件">▼画面に関する条件</h4>
+<hr>
+<p>例）</p>
+<ul>
+<li>生成AI連携システムの基盤プログラムに関してはN2.2デザイン規約に準拠すること</li>
+<li>クライアントの業務端末側で開発する画面（例：生成結果引用画面）については各アプリのUIを踏襲すること（例：退院サマリはN2.1ベース）</li>
+</ul>
+<hr>
+<h5 id="画面一覧">画面一覧</h5>
+<hr>
+<p>例）</p>
+<table>
+<thead>
+<tr>
+<th>機能ID</th>
+<th>機能名</th>
+<th>画面ID</th>
+<th>画面名</th>
+<th>画面概要</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F001,F002</td>
+<td>手動生成、定期生成</td>
+<td>UI01</td>
+<td>生成AI連携データ収集</td>
+<td>対象患者の電カルデータを取得し、連携用ファイルを作成する</td>
+<td>連携ファイル＝JSON</td>
+</tr>
+<tr>
+<td>F001,F002</td>
+<td>手動生成、定期生成</td>
+<td>UI02</td>
+<td>生成AI連携データ登録</td>
+<td>連携用ファイルを取得し、生成AIに対して生成リクエストを投げて生成結果を取得・登録する</td>
+<td></td>
+</tr>
+<tr>
+<td>F002</td>
+<td>定期生成</td>
+<td>UI05</td>
+<td>スケジューラー</td>
+<td>ユースケース毎の定期スケジュールに従って生成AI連携パラメータ作成サーバを呼び出す</td>
+<td></td>
+</tr>
+<tr>
+<td>F003～F009</td>
+<td>プロンプトメンテナンス</td>
+<td>UI03</td>
+<td>プロンプトマスタメンテナンス</td>
+<td>ユースケース毎に生成AI連携で使用するプロンプトのマスタを管理する</td>
+<td></td>
+</tr>
+<tr>
+<td>F010～F013</td>
+<td>スケジュールメンテナンス</td>
+<td>UI04</td>
+<td>スケジュールメンテナンス</td>
+<td>ユースケース毎に生成AI連携のバッチ処理で使用するスケジュールのマスタを管理する</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h5 id="画面遷移図リンク">画面遷移図（リンク）</h5>
+<hr>
+<p>例）</p>
+<hr>
+<h5 id="画面レイアウト">画面レイアウト</h5>
+<hr>
+<p>例）</p>
+<p><img src="file:///\\ssisafaripark@30450\DavWWWRoot\personal\fujiki\Shared Documents\_project\010_SvrChkHist\_ProjectSpecification\image-4.png" alt="Alt text"></p>
+<hr>
+<h4 id="帳票出力ファイルに関する要件">▼帳票・出力ファイルに関する要件</h4>
+<hr>
+<p>例）</p>
+<ul>
+<li>生成AIとの連携用ファイルについては常駐端末のローカルフォルダ内に配置すること（個人情報を含む可能性があるため共有フォルダはNG）</li>
+<li>プロンプトマスタでインポート/エクスポートするプロンプトファイルについては印刷されたときに見やすいこと</li>
+<li>プロンプトマスタでインポート/エクスポートするプロンプトファイルについては他病院への入れ込みが出来ること</li>
+</ul>
+<hr>
+<h5 id="帳票出力ファイルに関する事項">帳票・出力ファイルに関する事項</h5>
+<hr>
+<p>例）</p>
+<table>
+<thead>
+<tr>
+<th>機能ID</th>
+<th>機能名</th>
+<th>帳票ID</th>
+<th>帳票名</th>
+<th>帳票概要</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F001,F002</td>
+<td>手動生成、定期生成</td>
+<td>※割愛</td>
+<td>生成AIに送信する電カルデータを含む連携用ファイル</td>
+<td>JSON形式、個人情報を含む可能性アリ</td>
+<td></td>
+</tr>
+<tr>
+<td>F001,F002</td>
+<td>手動生成、定期生成</td>
+<td>※割愛</td>
+<td>生成AIに送信するプロンプトファイル群</td>
+<td>電カルデータ＋プロンプト</td>
+<td></td>
+</tr>
+<tr>
+<td>F008,F009</td>
+<td>プロンプトインポート、プロンプトエクスポート</td>
+<td>※割愛</td>
+<td>ユースケース毎のプロンプトファイル</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h5 id="帳票ファイルレイアウト">帳票・ファイルレイアウト</h5>
+<p>別紙「帳票・出力ファイルレイアウト」に示す</p>
+<h4 id="情報データに関する要件">▼情報・データに関する要件</h4>
+<hr>
+<p>例）</p>
+<ul>
+<li>生成AIへ渡すデータについては院内の電子カルテDBから取得すること</li>
+<li>生成AIへ渡すデータについては個人情報が含まれる可能性がある為、院内からAWSまでの経路において通信内容の傍受や改ざんなどを防ぐ仕組みを構築すること</li>
+<li>生成AIへ渡すデータについては個人情報が含まれる可能性がある為、AWS側でのセキュリティ対策を十分に実施すること</li>
+</ul>
+<hr>
+<h5 id="関連するデータテーブルエンティティ">関連するデータ・テーブル・エンティティ</h5>
+<hr>
+<p>例）</p>
+<table>
+<thead>
+<tr>
+<th>データID</th>
+<th>データ名（マスタ名など）</th>
+<th>データ詳細（構造、項目名など）</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D001</td>
+<td>診療データ</td>
+<td>カルテ記事、放射線所見、手術記事、病理所見、臨床検査結果、輸血履歴</td>
+<td></td>
+</tr>
+<tr>
+<td>D002</td>
+<td>退院サマリデータ</td>
+<td>byndata、bynkandata、bynkansub等</td>
+<td></td>
+</tr>
+<tr>
+<td>D003</td>
+<td>看護サマリデータ</td>
+<td>carasamhd、kandocidx、kandochd、kandocdt等</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>症状詳記データ</td>
+<td>datijirechd、</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h4 id="インターフェイスに関する要件">▼インターフェイスに関する要件</h4>
+<hr>
+<p>例）</p>
+<table>
+<thead>
+<tr>
+<th>システム名</th>
+<th>接続先システム</th>
+<th>送受信データ</th>
+<th>送受信</th>
+<th>送受信タイミング</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>各業務アプリ</td>
+<td>生成AI連携システム</td>
+<td>患者ID、入院日など</td>
+<td>送信</td>
+<td>生成リクエスト時</td>
+<td></td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>生成AI連携システム</td>
+<td>電カルデータ</td>
+<td>送受信</td>
+<td>定期時刻</td>
+<td>ファイル連携（JSON）、ユースケース毎の定期スケジュールに従うバッチ処理</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>生成AI連携システム</td>
+<td>電カルデータ</td>
+<td>送受信</td>
+<td>生成リクエスト時</td>
+<td>ファイル連携（JSON）</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>AWS</td>
+<td>電カルデータ、プロンプト</td>
+<td>送信</td>
+<td>随時</td>
+<td>TCP/IP（WEBAPI）、院内-SSI-AWSという経路で送信</td>
+</tr>
+<tr>
+<td>生成AI連携システム</td>
+<td>AWS</td>
+<td>生成結果</td>
+<td>受信</td>
+<td>随時</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h5 id="インターフェイス一覧">インターフェイス一覧</h5>
+<h2 id="非機能要件に関する事項">■非機能要件に関する事項</h2>
+<h3 id="性能に関する事項">◆性能に関する事項</h3>
+<hr>
+<p>例）
+システム名				項目								性能目標				備考</p>
+<hr>
+<h3 id="ユーザビリティに関する事項">◆ユーザビリティに関する事項</h3>
+<hr>
+<p>例）</p>
+<table>
+<thead>
+<tr>
+<th>分類</th>
+<th>要求</th>
+<th>対応</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>画面構成</td>
+<td>N2.2デザイン規約に準拠させること</td>
+<td>N2.2デザイン規約に準拠させる</td>
+</tr>
+<tr>
+<td>操作のしやすさ</td>
+<td>シンプルで直感的であること</td>
+<td>不要な機能や情報を減らしてシンプルな画面構成にする</td>
+</tr>
+<tr>
+<td></td>
+<td>システム全体を通して操作方法が統一されていること</td>
+<td>コントロール毎の操作方法を統一させる</td>
+</tr>
+<tr>
+<td>わかりやすさ</td>
+<td>操作対象が何を行うものか、ユーザーが容易に理解できること</td>
+<td>アイコンのみで理解が容易でない場合はテキストも配置する</td>
+</tr>
+<tr>
+<td></td>
+<td>処理に時間がかかる場合はその旨が伝わるようにすること</td>
+<td>プログレスバーなどを活用する</td>
+</tr>
+<tr>
+<td></td>
+<td>ボタンを押したときのアクションが明確であること</td>
+<td>必要に応じて処理の成功や失敗などを伝える</td>
+</tr>
+<tr>
+<td>エラーの防止</td>
+<td>データ削除など重要な処理については事前に注意表示を行い、利用者の確認を促すこと</td>
+<td>削除前には必ず確認メッセージを表示する</td>
+</tr>
+<tr>
+<td></td>
+<td>エラーメッセージは具体的にし、解決策を提示すること</td>
+<td>エラーメッセージは具体的にし、解決策を提示する</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="セキュリティに関する事項">◆セキュリティに関する事項</h3>
+<hr>
+<p>例）</p>
+<table>
+<thead>
+<tr>
+<th>分類</th>
+<th>要求</th>
+<th>対応</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>機密性</td>
+<td>許可された利用者のみ参照、登録、更新、削除が行えること</td>
+<td>ユーザごとに権限を設定できるようにする</td>
+</tr>
+<tr>
+<td>完全性</td>
+<td>生成AIによる生成過程において患者情報の混合を防止する対策を講じること</td>
+<td>最終的な生成AIへの生成リクエストは1患者ずつ実施する（＝並列処理しない）</td>
+</tr>
+<tr>
+<td>可用性</td>
+<td>アプリ停止が早期に検知できること</td>
+<td>常駐監視対象病院ではskysea設定を行うこと</td>
+</tr>
+<tr>
+<td>可用性</td>
+<td>複数病院からの生成リクエストに耐えられること</td>
+<td>AWS側でAロードバランサーを導入したり、病院毎にアカウントを切り分ける等の対策を実施する</td>
+</tr>
+<tr>
+<td>真正性</td>
+<td>利用者の認証が行えること</td>
+<td>不要　※通常のエントランスログインを前提とするため</td>
+</tr>
+<tr>
+<td>真正性</td>
+<td>AWSとの通信中に、送受信されるデータが改ざんされないように対策を講じること</td>
+<td>社内-AWS間はHTTPS通信とする</td>
+</tr>
+<tr>
+<td>信頼性</td>
+<td>データが破壊・削除されても復旧可能にすること</td>
+<td>AI生成に利用するプロンプト（電子カルデータを含む）はテキストログとして一定期間は保管する</td>
+</tr>
+<tr>
+<td>責任追跡性</td>
+<td>ログを残すこと</td>
+<td>テキストログおよびDBログを残す</td>
+</tr>
+<tr>
+<td>否認防止</td>
+<td>なし</td>
+<td>不要</td>
+</tr>
+<tr>
+<td>DBアクセスユーザー</td>
+<td>特殊権限のユーザーを使用しないこと</td>
+<td>user1は使用しない</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="拡張性互換性中立性に関する事項">◆拡張性／互換性／中立性に関する事項</h3>
+<hr>
+<p>例）</p>
+<table>
+<thead>
+<tr>
+<th>分類</th>
+<th>要求</th>
+<th>対応</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>拡張性</td>
+<td>生成AIのモデル変更（例：Sonnet→Haiku）に容易に対応できること</td>
+<td>将来のモデル拡張を考慮に入れた設計にする</td>
+</tr>
+<tr>
+<td>拡張性</td>
+<td>診療データの参照元データの増加に容易に対応できること</td>
+<td>将来の参照元データの増加を考慮に入れた設計にする（例：OCP）</td>
+</tr>
+<tr>
+<td>互換性</td>
+<td>なし</td>
+<td>不要</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="メンテナンスしやすさに関する事項">◆メンテナンスしやすさに関する事項</h3>
+<hr>
+<p>例）</p>
+<table>
+<thead>
+<tr>
+<th>分類</th>
+<th>要求</th>
+<th>対応</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>保守性</td>
+<td>開発・保守・導入に関するドキュメントが整備されていること</td>
+<td>製品版ローンチまでに開発・保守・導入に関するドキュメントを整備する</td>
+</tr>
+<tr>
+<td>保守性</td>
+<td>修正がしやすいようなソースコードになっていること</td>
+<td>可能な限りソースコードをきれいな状態にした上で保守フェーズに移行する（そのための作業工数を確保する）</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="品質に関する事項">◆品質に関する事項</h3>
+<hr>
+<p>例）
+分類	要求	対応	
+単体テスト	内部設計および単体テスト計画書に基づき各モジュールの単体テストを行うこと	内部設計書を作成し、設計書に基づいたホワイトボックステストを行う	
+結合テスト	外部設計および結合テスト計画書に基づきテスト仕様書を作成し、テスト仕様書にしたがって結合テストを行うこと	設計工程にてテスト仕様書を作成する</p>
+<pre><code>仕様通りに操作できるか、誤った操作をしても適切なエラーメッセージが表示されるか等の操作確認を行うこと	異常系テストの割合を2割以上含める	
+
+テスト対象に対して異常データを含む様々なバリエーションのデータを投入し、動作および処理結果を確認すること	異常系テストデータの割合を2割以上含める	
+</code></pre>
+<p>総合テスト	要件定義および総合テスト計画書に基づきテスト仕様書を作成し、テスト仕様書にしたがって総合テストを行うこと	設計工程にて総合テスト仕様書を作成する</p>
+<pre><code>システムで想定される全ての業務シナリオ及び運用シナリオを対象とし、総合テストを実施すること。	ユースケースに基づいた業務シナリオテストを実施する	
+
+性能や負荷に係るテストを行い、充分な性能を満たせることを確認すること。	総合テスト実施工程にで性能テストおよび負荷テストを実施する	
+</code></pre>
+<hr>
+<h3 id="移行に関する事項">◆移行に関する事項</h3>
+<hr>
+<p>例）
+移行に関する事項	※実証実験と製品化に向けた開発を同時並行で進めることになる為、実証実験の協力病院が最終的な製品版へ移行するときを想定して記載	
+分類	要求	対応	
+既存システムからのデータ移行	実証実験段階に作成されたシステムのデータは基本的には全て移行対象とすること	&quot;（必要に応じてFSEと連携して）データコンバートを実施する
+対象外データに関しては病院様へ理由を説明し、合意を得る&quot;</p>
+<p>システム移行	&quot;生成AI連携システムに関する業務停止時間は最大3日間とすること
+通常診療業務で利用する業務アプリの移行を最優先とすること&quot;	切り替えスケジュールを事前提示し、合意を得る</p>
+<p>業務運用移行	スムーズに生成AI連携を現行業務に含められること	操作説明書を作成して病院様へ提示する</p>
+<p>移行スケジュール	実証実験の協力病院がスムーズに製品版へ移行できること	製品版ローンチの2～3か月前を目安に移行を実施する</p>
+<p>他移行の要件	実証実験版と製品版との差でユーザーが混乱しないようにすること	事前に病院様へ操作説明を行う</p>
+<hr>
+<h3 id="教育に関する事項">◆教育に関する事項</h3>
+<hr>
+<p>例）
+分類	要求	対応	
+操作マニュアル	病院様にて操作教育を行う際に必要となる教材やマニュアル等を作成すること	病院様向けの操作マニュアルを作成する	
+操作マニュアル	SSIスタッフがシステムを導入する上で必要となる教材やマニュアル等を作成すること	SSIスタッフ向けの操作マニュアルを作成する	
+運用マニュアル	なし	不要	
+教育実施	なし	不要</p>
+<hr>
+<h3 id="運用保守引継ぎに関する事項">◆運用・保守・引継ぎに関する事項</h3>
+<hr>
+<p>例）
+分類	要求	対応	
+保守要件	稼働後の保守は、当社にて実施すること	※未定	
+イニシャルコスト：導入費用、回線費用	
+ランニングコスト：AWS利用料（定額？）	
+保守業務を実施する際に必要となる、開発ドキュメントや保守手順等を作成すること	製品版ローンチまでに開発・保守・導入に関するドキュメントを整備する	
+ネットワーク周りの保守はインフラソリューション部に担当してもらうこと	各種ドキュメントを整備する、インフラソリューション部と調整する	
+AWSクラウド内の開発を先進技術研究室以外の部署に移管すること	各種ドキュメントを整備する、AWSに関する勉強会を実施してもらう</p>
+<hr>
+<h1 id="markdown記載方法サンプル">MarkDown記載方法（サンプル）</h1>
+<p>オリジナルデータはWikiサイトから入手して、
+「C:\temp\pages」に保存</p>
+<h3 id="テーブル">■テーブル</h3>
+<p>table name : <strong>wiki_infradata</strong></p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>name</th>
+<th>type</th>
+<th>descritpion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>*</td>
+<td>id</td>
+<td>連番ID</td>
+<td>一意キー</td>
+</tr>
+<tr>
+<td></td>
+<td>directory_name</td>
+<td>nvarchar(max)</td>
+<td>ディレクトリ名</td>
+</tr>
+<tr>
+<td></td>
+<td>directory_name_decode</td>
+<td>nvarchar(max)</td>
+<td>ディレクトリ名</td>
+</tr>
+<tr>
+<td></td>
+<td>file_name</td>
+<td>nvarchar(max)</td>
+<td>ファイル名</td>
+</tr>
+<tr>
+<td></td>
+<td>file_name_decode</td>
+<td>nvarchar(max)</td>
+<td>ファイル名</td>
+</tr>
+<tr>
+<td></td>
+<td>contents</td>
+<td>nvarchar(max)</td>
+<td>コンテンツ</td>
+</tr>
+</tbody>
+</table>
+<h3 id="テーブル作成スクリプト">■テーブル作成スクリプト</h3>
+<p>Create_wiki_inforadata.sql</p>
+<pre><code class="language-SQL"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> wiki_infradata (
+    id <span class="hljs-type">INT</span> <span class="hljs-keyword">IDENTITY</span>(<span class="hljs-number">1</span>,<span class="hljs-number">1</span>) <span class="hljs-keyword">PRIMARY</span> KEY, <span class="hljs-comment">-- 連番ID (一意キー)</span>
+    directory_name NVARCHAR(MAX),     <span class="hljs-comment">-- ディレクトリ名</span>
+    directory_name_decode NVARCHAR(MAX), <span class="hljs-comment">-- ディレクトリ名（デコード）</span>
+    file_name NVARCHAR(MAX),          <span class="hljs-comment">-- ファイル名</span>
+    file_name_decode NVARCHAR(MAX),   <span class="hljs-comment">-- ファイル名（デコード）</span>
+    contents NVARCHAR(MAX)            <span class="hljs-comment">-- コンテンツ</span>
+);
+</code></pre>
+<h3 id="環境">■環境</h3>
+<ul>
+<li>c:\GID\CnvWikiToDb\
+<ul>
+<li>log
+<ul>
+<li>yyyy-mm-dd.log
+<ul>
+<li>日付単位でのログ、１月以上古いファイル自動で削除される。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>xxx.exe</li>
+<li>Setting.xml -&gt; 不要</li>
+<li>Dbconnetion.xml -&gt; 不要
+<ul>
+<li>データベース接続情報</li>
+</ul>
+</li>
+<li>WIkiToDbSetting.xml -&gt; 不要</li>
+<li>Create_wiki_inforadata.sql</li>
+</ul>
+</li>
+</ul>
+<h3 id="exeの呼び出し方">■Exeの呼び出し方</h3>
+<p>前提１）前提として、対象のデータベースに、「Create_wiki_inforadata」でテーブル作ること。<br>
+前提２）また権限は必要に応じて、「databaseuser」に応じて削除、登録の権限を付与すること。</p>
+<pre><code class="language-bash">xxx.exe -wikipath:<span class="hljs-string">&quot;pathxxx&quot;</span> -host:<span class="hljs-string">&quot;serverxx&quot;</span> -databasename:<span class="hljs-string">&quot;xxxxdb&quot;</span> -databaseuser:<span class="hljs-string">&quot;userxxx&quot;</span> -databasepassword:<span class="hljs-string">&quot;passxxx&quot;</span> -dataclear:<span class="hljs-literal">true</span>/false -CurrentPath:<span class="hljs-string">&quot;C:\GAI\WikiToDb&quot;</span> -wikitodbtemp:<span class="hljs-string">&quot;c:\gai_temp&quot;</span> -output:csv
+
+<span class="hljs-built_in">help</span> ヘルプ
+wikipath:pathxxx: wikiのデータのパス　def  C:\temp\pages
+host:serverxx：ホスト名 sqlserverの名前
+databasename:xxxxdb:SQLServerでのデータベース名
+databaseuser:userxxx: sqlserverへのログインユーザー sa　など
+databasepassword: ユーザーに対応するパスワード
+dataclear:<span class="hljs-literal">true</span>　一度データを削除する <span class="hljs-literal">false</span> データは削除されない。同一テーブルに追加
+currentpath:xxxx 実行ファイルのあるパス　C:\GAI\WikiToDb 
+wikitodbtemp:<span class="hljs-string">&quot;c:\gai_temp&quot;</span>:currentpathないにある「temp」フォルダの場合、パス名が長いのを回避するためのパス
+output:csv csv出力の場合には記載、記載なしなら、データベースへの登録 出力先はExeと同じ場所
+</code></pre>
+<pre><code class="language-ini">Newton.ini
+<span class="hljs-section">[BynSamKy]</span>
+<span class="hljs-comment">;移動情報引用画面で、転科は退院とみなすかどうか(0:みなす(DEF) 1:みなさない)</span>
+<span class="hljs-comment">;※Hoozuki.ini[SinkiInyou]NotTenkaCheckと設定を統一してください。</span>
+<span class="hljs-attr">NotTenkaCheck</span>=<span class="hljs-number">1</span>
+<span class="hljs-comment">;同じ診療科に転科のときはサマリーを(1:わける,0=わけない(=Def))</span>
+<span class="hljs-attr">NotSammaryDivide</span> = <span class="hljs-number">1</span><span class="hljs-string">&quot;
+</span></code></pre>
+<h3 id="コンバート用のコンソールの作成cnvwikitodb">■コンバート用のコンソールの作成（CnvWikiToDB)</h3>
+<ul>
+<li>設定ファイルもで持つもの。→不要説</li>
+<li>DBへの接続の仕方、現状推奨で。→引数で調整</li>
+<li>DBへの接続設定Xml</li>
+<li>処理：ファイルの読み取り</li>
+<li>処理：DBへの書き込み</li>
+<li>処理：進捗など残すようにする。→ログフォルダの中に作成する。</li>
+</ul>
+<h3 id="連番">連番</h3>
+<ol>
+<li>test</li>
+<li>test2</li>
+</ol>
+<h3 id="参考">■参考</h3>
+<p>htmlurl エンコーディング、デコーディング
+<a href="https://dobon.net/vb/dotnet/internet/urlencode.html#google_vignette">https://dobon.net/vb/dotnet/internet/urlencode.html#google_vignette</a></p>
+<details><summary>すごく長い文章とかプログラムとか</summary>
+<pre><code class="language-python"><span class="hljs-built_in">print</span>(<span class="hljs-string">&#x27;Hello world!&#x27;</span>)
+</code></pre>
+</details>
+
+            
+            
+        </body>
+        </html>

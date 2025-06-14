@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockProfit10 - ユーザー設定</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 700px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        h1 .back-button { font-size: 16px; background-color: #6c757d; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }
+        h1 .back-button:hover { background-color: #5a6268; }
+        .form-section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px dashed #eee; }
+        .form-section:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .form-section h2 { font-size: 20px; color: #34495e; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group input[type="email"] {
+            width: calc(100% - 22px); /* Padding + Border */
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .form-group input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .button { background-color: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background-color 0.3s ease; }
+        .button:hover { background-color: #0056b3; }
+        .success-message { color: #28a745; font-weight: bold; margin-top: 10px; }
+        .footer-nav { margin-top: 30px; text-align: center; }
+        .footer-nav a { color: #007bff; text-decoration: none; margin: 0 15px; font-size: 15px; }
+        .footer-nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            ユーザー設定
+            <button class="back-button" onclick="location.href='main.html'">メイン画面へ戻る</button>
+        </h1>
+
+        <div class="form-section">
+            <h2>基本情報</h2>
+            <div class="form-group">
+                <label for="username">ユーザー名:</label>
+                <input type="text" id="username" value="現在のユーザー名" placeholder="ユーザー名を入力">
+            </div>
+            <div class="form-group">
+                <label for="email">メールアドレス:</label>
+                <input type="email" id="email" value="user@example.com" disabled style="background-color: #e9ecef;">
+                <p style="font-size: 0.9em; color: #777;">メールアドレスは変更できません。変更が必要な場合は運営にお問い合わせください。</p>
+            </div>
+            <button class="button" onclick="alert('ユーザー名を更新しました！')">ユーザー名を更新</button>
+        </div>
+
+        <div class="form-section">
+            <h2>パスワード変更</h2>
+            <div class="form-group">
+                <label for="current-password">現在のパスワード:</label>
+                <input type="password" id="current-password" placeholder="現在のパスワードを入力">
+            </div>
+            <div class="form-group">
+                <label for="new-password">新しいパスワード:</label>
+                <input type="password" id="new-password" placeholder="新しいパスワードを入力">
+            </div>
+            <div class="form-group">
+                <label for="confirm-password">新しいパスワード（確認）:</label>
+                <input type="password" id="confirm-password" placeholder="新しいパスワードを再入力">
+            </div>
+            <button class="button" onclick="alert('パスワードを更新しました！')">パスワードを更新</button>
+        </div>
+
+        <div class="form-section">
+            <h2>通知設定</h2>
+            <div class="form-group">
+                <input type="checkbox" id="email-notifications" checked>
+                <label for="email-notifications">メール通知をONにする</label>
+            </div>
+            <div class="form-group">
+                <input type="checkbox" id="app-notifications" checked>
+                <label for="app-notifications">アプリ内通知をONにする</label>
+            </div>
+            <button class="button" onclick="alert('通知設定を更新しました！')">通知設定を更新</button>
+        </div>
+
+        <div class="footer-nav">
+            <a href="#">メイン画面へ</a> |
+            <a href="#">ポートフォリオ一覧</a> |
+            <a href="#">通知確認</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockProfit10 - ポートフォリオ一覧</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 960px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 25px; }
+        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .button { background-color: #4CAF50; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background-color 0.3s ease; }
+        .button:hover { background-color: #45a049; }
+        .portfolio-list { list-style: none; padding: 0; }
+        .portfolio-item { background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; padding: 20px; display: flex; justify-content: space-between; align-items: center; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .portfolio-item:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+        .portfolio-item h2 { margin: 0 0 8px 0; color: #34495e; font-size: 20px; }
+        .portfolio-item p { margin: 0; color: #666; font-size: 14px; line-height: 1.5; }
+        .portfolio-actions { display: flex; gap: 10px; }
+        .portfolio-actions .view-button { background-color: #007bff; }
+        .portfolio-actions .view-button:hover { background-color: #0056b3; }
+        .portfolio-actions .delete-button { background-color: #dc3545; }
+        .portfolio-actions .delete-button:hover { background-color: #c82333; }
+        .no-portfolios { text-align: center; color: #777; padding: 50px 0; font-size: 1.1em; }
+        .footer-nav { margin-top: 30px; text-align: center; }
+        .footer-nav a { color: #007bff; text-decoration: none; margin: 0 15px; font-size: 15px; }
+        .footer-nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ポートフォリオ一覧</h1>
+
+        <div class="header-actions">
+            <button class="button" onclick="alert('新規ポートフォリオ作成モーダルを表示')">新規ポートフォリオ作成</button>
+        </div>
+
+        <ul class="portfolio-list">
+            <li class="portfolio-item">
+                <div>
+                    <h2>私の成長ポートフォリオ</h2>
+                    <p>購入予定銘柄: 5, 監視中: 3, 売り候補: 1</p>
+                    <p>メモ: 長期保有でキャピタルゲイン狙い。テクノロジー株が中心。</p>
+                </div>
+                <div class="portfolio-actions">
+                    <button class="button view-button" onclick="location.href='portfolio_detail.html?id=1'">詳細を見る</button>
+                    <button class="button delete-button" onclick="confirm('このポートフォリオを削除してもよろしいですか？')">削除</button>
+                </div>
+            </li>
+            <li class="portfolio-item">
+                <div>
+                    <h2>配当重視ポートフォリオ</h2>
+                    <p>購入予定銘柄: 3, 監視中: 2, 売り候補: 0</p>
+                    <p>メモ: インカムゲイン重視。高配当銘柄で構成。</p>
+                </div>
+                <div class="portfolio-actions">
+                    <button class="button view-button" onclick="location.href='portfolio_detail.html?id=2'">詳細を見る</button>
+                    <button class="button delete-button" onclick="confirm('このポートフォリオを削除してもよろしいですか？')">削除</button>
+                </div>
+            </li>
+            <li class="portfolio-item">
+                <div>
+                    <h2>テスト用ポートフォリオ</h2>
+                    <p>購入予定銘柄: 1, 監視中: 1, 売り候補: 0</p>
+                    <p>メモ: アプリの機能検証用。</p>
+                </div>
+                <div class="portfolio-actions">
+                    <button class="button view-button" onclick="location.href='portfolio_detail.html?id=3'">詳細を見る</button>
+                    <button class="button delete-button" onclick="confirm('このポートフォリオを削除してもよろしいですか？')">削除</button>
+                </div>
+            </li>
+            </ul>
+
+        <div class="footer-nav">
+            <a href="#">メイン画面へ</a> |
+            <a href="#">ユーザー設定</a> |
+            <a href="#">通知確認</a>
+        </div>
+    </div>
+</body>
+</html>

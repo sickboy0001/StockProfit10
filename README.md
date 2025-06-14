@@ -1,4 +1,9 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+Python利用時  
+実行時には環境作成、環境の利用が必要
+‘‘‘bash
+ .venv\Scripts\activate.ps1
+‘‘‘ [debug] [2025-06-12T20:42:14.347Z] Found config in file "C:\work\dev\spa\stockprofit10-app\vercel.json"
 
 ## Getting Started
 

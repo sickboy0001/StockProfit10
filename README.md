@@ -1,4 +1,76 @@
 
+## 1.概要（Summary）
+株の投資やるうえで、勝率のみを優先した仕組みがゴール
+ひとまず実用的に使えるようにしたい
+ポートフォリオなどは有用、シミュレーション機能を考え中
+
+## 2.セットアップ手順（Getting Started）
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/sickboy0001/hadbit-app.git
+cd hadbit-app
+
+# 依存関係をインストール
+npm install
+
+# 開発サーバーを起動
+npm run dev
+```
+
+## 3. 使用技術一覧（技術スタックの要約）
+調整中）**ひと目でわかるスタック表**
+
+###  使用技術（Tech Stack）
+- フロントエンド: React, Next.js, TypeScript
+- UI: Tailwind CSS, shadcn/ui
+- データベース: Supabase
+- デプロイ: Vercel
+
+#### チャート、タイムラインについて
+ガントチャートは自作になりました。といっても、実際には生成AIに問い合わせた結果
+
+
+## 4.デモ or スクリーンショット
+
+<!-- Vercel:[Vercel](https://github.com/sickboy0001/StockProfit10) -->
+Github:[GitHub](https://github.com/sickboy0001/StockProfit10)
+
+## 5.環境
+### ■開発環境
+
+|No.|項目|ソフトウェア名、バージョン等			|
+|-|-|-|
+|1|OS|Edition:Window 10 Pro / バージョン:1607 以降 / 32-bit or 64-bit			|
+|2|開発言語|TypeScript			|
+|3|フレームワーク|React+NextJS|
+|4|ソース管理|GitHub|
+|5|開発ツール|VSCode|
+
+### ■ハードウェア構成
+|No.|項目|配置場所|構成|役割など|
+|-|-|-|-|-|
+|1|開発環境（ローカル）|ローカル||コードの実装|
+|2|GItHub|インターネット||ソースの保存場所、vercel連携でも利用|
+|3|Vercel|インターネット||デプロイ先|
+|4|Supabase|インターネット||データベース|
+
+## 6.設計
+### ■システム配置
+
+### ■機能要件・一覧
+
+### ■画面設計
+- tailwindcss、shadcnuiを利用すること。
+- AtomicDesingを意識した構成にすること。
+
+
+## 7.経緯
+
+## 8.既知の課題
+
+
+## memo
 Python利用時  
 実行時には環境作成、環境の利用が必要
 ‘‘‘bash

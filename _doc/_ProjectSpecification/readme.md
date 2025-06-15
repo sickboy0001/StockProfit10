@@ -308,7 +308,9 @@ YahooFinanceAPIの利用制限: 過去データの取得期間やリクエスト
 | 10  | チャート | stock_chart | 株のチャート、状態の確認| 様々なテクニカル指標も表示可能 | 
 | 11 | シミュレーション設定・結果画面 | simulation | 指定したルールで過去の株価データに基づきシミュレーションを実行し、結果を表示 | 銘柄選択、期間指定、売買条件設定、取引単位指定、損益計算結果表示、取引履歴表示、チャート表示以下に保存しています。|
 | 12 | シミュレーション設定・結果画面 | simulation | 指定したルールで過去の株価データに基づきシミュレーションを実行し、結果を表示 | 銘柄選択、期間指定、売買条件設定、取引単位指定、損益計算結果表示、取引履歴表示、チャート表示以下に保存しています。|
-|13	|APIデータ確認画面	|api_data_viewer	YahooFinanceAPIから取得した株価データ（未加工）を一覧で確認し、データベースへの登録を指示する画面。	銘柄コード・期間入力、API呼び出し結果のJSON表示、テーブル形式でのデータ表示、データベース登録ボタン。|
+|13	|APIデータ確認画面	|api_data_viewer|	YahooFinanceAPIから取得した株価データ（未加工）を一覧で確認し、データベースへの登録を指示する画面。	銘柄コード・期間入力、API呼び出し結果のJSON表示、テーブル形式でのデータ表示、データベース登録ボタン。|
+|14	|参照履歴一覧画面	|StocksViewHistory|過去の参照履歴から、参照している株価コード、株価名称の一覧、および、取得済みデータの情報も表示する（取得済みデータは株価について、〇月〇日から〇月〇日までなど）、また対象の株のチャート画面への遷移もできるものとする|
+|15	|ユーザー一覧	|UserList|SuperUser、Manager用の画面、利用者に管理者の権限、デバッカーの権限を与えることができる。|
 
 _012_ui_mockup
 
@@ -356,94 +358,400 @@ classDef new_feature fill:#cff;
 ```
 
 ## 2.3. 各画面の詳細設計(UI Deital)
-### 画面ID
-### ワイヤーフレーム（またはモック）
+
+### ユーザー一覧
+Superユーザーは、アプリケーションのユーザーを管理する権限を持つと想定し、ユーザー情報の閲覧、状態（有効/無効）の変更、役割の管理などができるような画面構成を提案します。
+
+
+#### 画面ID
+`UserList`
+
+#### ワイヤーフレーム（またはモック）
+
+```
++-------------------------------------------------+
+| StockProfit10                                   |
+| Header (共通ヘッダー) - Superユーザーメニュー   |
++-------------------------------------------------+
+| ユーザー管理 > ユーザー一覧                |
+|-------------------------------------------------|
+| [検索フィルター]                                |
+|   [ユーザー名入力] [メールアドレス入力] [役割選択ドロップダウン] [ステータス選択] [検索ボタン]
+|                                                 |
+| **ユーザーリスト** |
+| +---------------------------------------------+ |
+| | ユーザーID (UUID先頭8桁) | ユーザー名 | メールアドレス | Mem | DEB |     | ステータス | 登録日時   | 最終ログイン | 操作       |
+| |------------------------|------------|----------------|----------|------------|------------|--------------|------------|
+| | 1234abcd               | 山田 太郎  | yamada@example.com | Member   | 有効       | 2024-01-01 | 2025-06-14   | [編集] |
+| | 5678efgh               | 鈴木 花子  | suzuki@example.com | Debugger | 有効       | 2024-02-15 | 2025-06-13   | [編集] |
+| | 9012ijkl               | 田中 聡    | tanaka@example.com | Manager  | 有効       | 2024-03-20 | 2025-06-12   | [編集] |
+| | ...                    | ...        | ...            | ...      | ...        | ...        | ...          | ...        |
+| +---------------------------------------------+ |
+| [ページネーション] (例: < 1 2 3 >)            |
++-------------------------------------------------+
+| Footer (共通フッター)                           |
++-------------------------------------------------+
+```
+
+#### 入力項目・表示項目
+
+* **入力項目**:
+    * **ユーザー名**: テキスト入力フィールド。部分一致検索を可能にする。
+    * **メールアドレス**: テキスト入力フィールド。部分一致検索を可能にする。
+    * **役割選択**: ドロップダウンリスト。`roles` テーブルから取得した役割 (`Manager`, `Debugger`, `Member` など) を選択。複数選択も可能。
+    * **ステータス選択**: ドロップダウンリスト。`有効`, `無効` などのステータスを選択。
+    * **検索ボタン**: 入力されたフィルター条件でユーザーリストを絞り込む。
+
+* **表示項目**:
+    * **ユーザーリスト（テーブル形式）**:
+        * **ユーザーID**: `spt_user.id` の先頭数桁（例: UUIDの先頭8桁）を表示。詳細画面へのリンクとなる。
+        * **ユーザー名**: `spt_user.name`。
+        * **メールアドレス**: `spt_user.email`。
+        * **役割**: `user_roles` テーブルを介して`roles`テーブルから取得した役割名。複数ある場合はカンマ区切りなどで表示。
+        * **ステータス**: ユーザーの有効/無効状態（例: Supabase Authの`confirmed_at`やカスタムフィールドによる）。
+        * **登録日時**: `spt_user` または `auth.users` の作成日時。
+        * **最終ログイン**: `auth.users` の `last_sign_in_at`。
+        * **操作**: ユーザー詳細/編集画面へ遷移するためのボタンまたはリンク。
+
+#### バリデーション仕様
+
+* **検索フィルター**: 特に必須入力のバリデーションは不要。未指定なら全てを表示。
+* **日付範囲**: もし登録日時や最終ログイン日時で期間検索を追加する場合は、開始日が終了日より過去または同日であること。未来の日付は指定不可。
+
+#### アクション（ボタン・リンク）
+
+* **「編集」ボタン/リンク**:
+    * 押下時にはポップアップで、資格を複数選択できるようにする（Manager、Debugger、Memberなど）
+
+#### エラーメッセージ仕様
+
+* **データ取得エラー**:
+    * ポップアップホバーでの表示。
+    * 「ユーザーリストの取得中にエラーが発生しました。時間をおいて再度お試しください。」
+* **検索結果なし**:
+    * 「該当するユーザーはいません。」というメッセージを表示。
+
+#### 状態遷移（例：読み込み中／エラー表示）
+
+* **初期状態**: フィルター項目は空欄またはデフォルト値で表示。ユーザーリストは全ユーザーまたはページングの最初のページが表示されている。
+* **検索実行中**: 検索ボタンが無効化され、リスト表示領域にローディングスピナーが表示される。
+* **検索結果表示**: 検索条件に合致するユーザーがリストに表示される。
+* **検索結果なし**: 「該当するユーザーはいません。」というメッセージが表示される。
+* **エラー発生時**: ポップアップホバーでエラーメッセージが表示される。
+
+#### 補足事項
+
+* **権限管理**: この画面自体がSuperユーザーのみアクセス可能であることを前提とし、Next.jsのミドルウェアやサーバーサイドの認証チェックでアクセス制限をかける必要があります。
+* **ユーザー状態の変更**: 詳細/編集画面で、ユーザーの有効/無効の切り替えや役割の付与/剥奪といった操作ができるようにします。これらの操作はServer Actionsを介してSupabaseの`auth.users`テーブルや`user_roles`テーブルを更新することになります。
+* **データ取得**: `spt_user`, `roles`, `user_roles`, `auth.users` テーブルをJOINしてデータを取得するPostgreSQL関数（RPC）をSupabaseに作成し、それをNext.jsのServer Actionから呼び出すと効率的です。
+    * `auth.users`テーブルはSupabaseの認証機能で管理されるため、直接参照するには特別な権限（Service Role Keyなど）が必要になる場合があります。RPC関数を使用することで、安全にアクセスできます。
+
+
+
+```sql
+-- public.get_users_with_roles_and_status(): ユーザー一覧と役割情報を取得
+-- 管理画面表示用に、ユーザー名、メール、役割、ステータスでフィルタリングし、ページネーションも考慮
+CREATE OR REPLACE FUNCTION public.get_users_with_roles_and_status(
+    p_user_name TEXT DEFAULT NULL,
+    p_email TEXT DEFAULT NULL,
+    p_role_ids INTEGER[] DEFAULT NULL, -- 役割IDの配列（フィルタリング用）
+    p_status BOOLEAN DEFAULT NULL,     -- True: 有効 (メール確認済み), False: 無効 (メール未確認/無効化)
+    p_limit INTEGER DEFAULT 10,
+    p_offset INTEGER DEFAULT 0
+)
+RETURNS TABLE (
+    user_id UUID,
+    user_name TEXT,
+    user_email TEXT,
+    user_roles TEXT[], -- ロール名の配列
+    is_active BOOLEAN, -- ユーザーのステータス (email_confirmed_atを基に判断)
+    registered_at TIMESTAMPTZ,
+    last_signed_in_at TIMESTAMPTZ,
+    total_count BIGINT -- フィルタリング後の総ユーザー数 (ページネーション用)
+)
+LANGUAGE plpgsql
+SECURITY DEFINER -- IMPORTANT: auth.usersテーブルへのアクセスが必要なため、定義者の権限で実行
+SET search_path = public, auth -- authスキーマを検索パスに追加
+AS $$
+DECLARE
+    _total_count BIGINT;
+BEGIN
+    -- フィルタリング後の総ユーザー数を計算 (ページネーションの合計ページ数算出に必要)
+    SELECT COUNT(DISTINCT au.id)
+    INTO _total_count
+    FROM auth.users au
+    JOIN public.spt_user su ON au.id = su.id
+    LEFT JOIN public.user_roles ur ON su.id = ur.user_id
+    LEFT JOIN public.roles r ON ur.role_id = r.id
+    WHERE
+        (p_user_name IS NULL OR su.name ILIKE '%' || p_user_name || '%') AND
+        (p_email IS NULL OR au.email ILIKE '%' || p_email || '%') AND
+        (p_role_ids IS NULL OR r.id = ANY(p_role_ids)) AND -- 役割IDでフィルタ
+        (p_status IS NULL OR (au.email_confirmed_at IS NOT NULL) = p_status)
+    ;
+
+    RETURN QUERY
+    SELECT
+        au.id AS user_id,
+        su.name AS user_name,
+        au.email AS user_email,
+        -- ARRAY_AGGで重複しない役割名を配列として取得
+        ARRAY_AGG(DISTINCT r.name ORDER BY r.name) FILTER (WHERE r.name IS NOT NULL) AS user_roles,
+        (au.email_confirmed_at IS NOT NULL) AS is_active, -- email_confirmed_atが存在すれば有効とみなす
+        au.created_at AS registered_at,
+        au.last_sign_in_at,
+        _total_count -- 各行に総数を付与
+    FROM
+        auth.users au
+    JOIN
+        public.spt_user su ON au.id = su.id
+    LEFT JOIN
+        public.user_roles ur ON su.id = ur.user_id
+    LEFT JOIN
+        public.roles r ON ur.role_id = r.id
+    WHERE
+        (p_user_name IS NULL OR su.name ILIKE '%' || p_user_name || '%') AND
+        (p_email IS NULL OR au.email ILIKE '%' || p_email || '%') AND
+        (p_role_ids IS NULL OR r.id = ANY(p_role_ids)) AND
+        (p_status IS NULL OR (au.email_confirmed_at IS NOT NULL) = p_status)
+    GROUP BY
+        au.id, su.name, au.email, au.created_at, au.last_sign_in_at
+    ORDER BY
+        au.created_at DESC -- 登録日時で降順ソート
+    LIMIT p_limit OFFSET p_offset;
+END;
+$$;
+-- authenticated ユーザーがこの関数を実行できるようにします
+GRANT EXECUTE ON FUNCTION public.get_users_with_roles_and_status(TEXT, TEXT, INTEGER[], BOOLEAN, INTEGER, INTEGER) TO authenticated;
+
+```
+### 画面詳細：StocksViewHistory
+
+#### ワイヤーフレーム（またはモック）
+
 ```
 +-------------------------------------------------+
 | StockProfit10                                   |
 | Header (共通ヘッダー)                           |
 +-------------------------------------------------+
-| APIデータ確認                                   |
+| 参照履歴一覧                                    |
 |-------------------------------------------------|
-| [銘柄コード入力欄] [期間選択（開始日〜終了日）] | [API呼び出しボタン]  |
+| [検索フィルター]                                |
+|   [期間選択] [検索ボタン]
 |                                                 |
-| [Loading Spinner (API呼び出し中)]               |
-|                                                 |
-| **APIレスポンス (JSON形式)** |
+| **参照履歴リスト** |
 | +---------------------------------------------+ |
-| | {                                           | |
-| |   "chart": {                                | |
-| |     "result": [                             | |
-| |       {                                     | |
-| |         "meta": {...},                      | |
-| |         "timestamp": [...],                 | |
-| |         "indicators": {...}                 | |
-| |       }                                     | |
-| |     ]                                       | |
-| | }                                           | |
+| | 銘柄コード | 銘柄名     | 最終参照日時 | データ取得期間 | チャート |
+| |------------|------------|--------------|----------------|----------|
+| | 7203.T     | トヨタ自動車 | 2025-06-14   | 2020-01-01~2025-06-14 | [表示]   |
+| | 9984.T     | ソフトバンクG| 2025-06-13   | 2022-03-01~2025-06-13 | [表示]   |
+| | 6758.T     | ソニーグループ| 2025-06-12   | 2021-05-01~2025-06-12 | [表示]   |
+| | ...        | ...        | ...          | ...            | ...      |
 | +---------------------------------------------+ |
-|                                                 |
-| **整形済みデータ (テーブル形式)** |
-| +---------------------------------------------+ |
-| | 日付       | 始値  | 高値  | 安値  | 終値  | 出来高  |
-| |------------|-------|-------|-------|-------|---------|
-| | 2024-05-01 | 100.0 | 102.5 | 99.8  | 101.2 | 123456  |
-| | 2024-05-02 | 101.5 | 103.0 | 100.5 | 102.8 | 234567  |
-| | ...        | ...   | ...   | ...   | ...   | ...     |
-| +---------------------------------------------+ |
-|                                                 |
-| [データベースに登録ボタン]                      |
-| [メッセージ表示エリア（登録成功/失敗など）]    |
+| [ページネーション] (例: < 1 2 3 >)            |
 +-------------------------------------------------+
 | Footer (共通フッター)                           |
 +-------------------------------------------------+
-
 ```
 
-- 入力項目・表示項目
-    - 入力項目:
-        - 銘柄コード: テキスト入力フィールド。Yahoo Financeの銘柄コード（例: 7203.T）。
-        - 期間選択: カレンダーピッカーなどで開始日と終了日を選択。
-    - 表示項目:
-        - APIレスポンス（JSON形式）: YahooFinanceAPIから返却された未加工のJSONデータを整形して表示。読み取り専用。
-        - 整形済みデータ（テーブル形式）: JSONデータから主要な株価情報（日付、始値、高値、安値、終値、出来高）を抽出し、テーブル形式で表示。読み取り専用。
-    - メッセージ表示エリア: API呼び出しの成功/失敗、データベース登録の成功/失敗、エラーメッセージなどを表示。
-- バリデーション仕様
-    - 銘柄コード: 必須入力。半角英数字とピリオドのみ許可。
-    - 期間選択: 開始日と終了日が必須。開始日が終了日より過去であること。過去の株価データ取得のため、未来の日付は指定不可。
-    - API呼び出し制限: YahooFinanceAPIの利用制限（リクエスト回数など）に抵触する可能性があれば、ユーザーに注意喚起メッセージを表示。
-- アクション（ボタン・リンク）
-    - 「API呼び出し」ボタン:
-        - 入力された銘柄コードと期間でYahooFinanceAPIを呼び出し、結果を画面に表示。
-        - 呼び出し中はボタンを無効化し、ローディング表示。
-    - 「データベースに登録」ボタン:
-        - 画面に表示されている整形済みデータをspt_daily_quotesテーブルに登録。
-        - 登録中はボタンを無効化し、ローディング表示。
-        - 登録成功/失敗に応じてメッセージ表示エリアを更新。
-- エラーメッセージ仕様
-    - API呼び出し失敗:
-        - 「株価データの取得に失敗しました。銘柄コードまたは期間をご確認ください。」
-        - 「APIの利用制限を超過しました。しばらく時間をおいてお試しください。」（429 Too Many Requests時）
-        - 「Yahoo Finance APIとの通信エラーが発生しました。時間をおいて再度お試しください。」（500 Server Error時）
-    - データベース登録失敗:
-        - 「データベースへの登録に失敗しました。システム管理者にお問い合わせください。」
-        - （詳細なエラーがあれば、開発者向けにログに出力）
-    - バリデーションエラー:
-        - 「銘柄コードは必須です。」
-        - 「期間を正しく入力してください。」
-- 状態遷移（例：読み込み中／エラー表示）
-    - 初期状態: 入力フィールドと「API呼び出し」ボタンが表示されている状態。データ表示エリアは空。
-    - API呼び出し中: 「API呼び出し」ボタンが無効化され、ローディングスピナーが表示される。
-    - API呼び出し成功: JSONデータとテーブル形式のデータが表示され、「データベースに登録」ボタンが有効化される。
-    - API呼び出し失敗: エラーメッセージが表示される。
-    - データベース登録中: 「データベースに登録」ボタンが無効化され、ローディングスピナーが表示される。
-    - データベース登録成功: 成功メッセージが表示される。
-    - データベース登録失敗: エラーメッセージが表示される。
-### 入力項目・表示項目
+#### 入力項目・表示項目
+
+* **入力項目**:
+    * **銘柄コード**: テキスト入力フィールド。部分一致検索を可能にする。
+    * **銘柄名**: テキスト入力フィールド。部分一致検索を可能にする。
+    * **期間選択**: カレンダーピッカーなどで参照日時を絞り込むための開始日と終了日を選択。
+    * **検索ボタン**: 入力されたフィルター条件で履歴を絞り込む。
+* **表示項目**:
+    * **参照履歴リスト（テーブル形式）**:
+        * **銘柄コード**: 参照された株価コード。
+        * **銘柄名**: 参照された株価の名称。
+        * **最終参照日時**: その銘柄が最後に参照された日時 (`spt_stock_view_history.viewed_at` の最新値)。
+        * **データ取得期間**: データベースに取得済みの株価データ（`spt_daily_quotes` テーブルに存在するデータ）の最も古い日付から最も新しい日付まで。例: 「2023-01-01～2024-12-31」。データがない場合は「データなし」などと表示。
+        * **チャート**: 対象の株のチャート画面へ遷移するためのボタンまたはリンク。
+
 ### バリデーション仕様
+* **期間選択**: 開始日と終了日の両方が選択されていること。開始日が終了日より過去または同日であること。未来の日付は指定不可。
+  * 未指定なら、すべてを表示
+
 ### アクション（ボタン・リンク）
-### エラーメッセージ仕様
-### 状態遷移（例：読み込み中／エラー表示）
+* **検索ボタン**:
+    * 入力されたフィルター条件に基づいて、参照履歴リストを更新する。
+    * 検索中はローディングスピナーなどを表示。
+* **「チャート表示」ボタン/リンク**:
+    * 各行の「チャート」列にあるボタンをクリックすると、その銘柄の株価チャート画面（`stock_chart` 画面）へ遷移する。
+    * 遷移時には、対象銘柄のコードをパラメータとして渡す。
+
+### get_period_stock_views
+
+```sql
+-- Supabase PostgreSQL Function: get_period_stock_views
+-- 指定された期間内の株価参照履歴を集計し、
+-- 銘柄コード、銘柄名、市場、業種、期間内の参照件数、期間内最新参照日時を返します。
+
+CREATE OR REPLACE FUNCTION public.get_period_stock_views(
+    start_date_param DATE DEFAULT NULL, -- 期間の開始日 (NULLの場合、期間を考慮しない)
+    end_date_param DATE DEFAULT NULL,   -- 期間の終了日 (NULLの場合、期間を考慮しない)
+    stock_code_param TEXT DEFAULT NULL, -- 銘柄コードのフィルタ (NULLの場合、フィルタしない)
+    stock_name_param TEXT DEFAULT NULL  -- 銘柄名のフィルタ (NULLの場合、フィルタしない)
+)
+RETURNS TABLE (
+    stock_code TEXT,
+    stock_name TEXT,
+    stock_market TEXT,
+    stock_industry TEXT,
+    period_view_count BIGINT,
+    latest_viewed_at_in_period TIMESTAMP WITH TIME ZONE
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        svh.stock_code,
+        s.name AS stock_name,
+        s.market AS stock_market,
+        s.industry AS stock_industry,
+        COUNT(svh.id) AS period_view_count,
+        MAX(svh.viewed_at) AS latest_viewed_at_in_period
+    FROM
+        public.spt_stock_view_history AS svh
+    JOIN
+        public.spt_stocks AS s ON svh.stock_code = s.code
+    WHERE
+        (start_date_param IS NULL OR svh.viewed_at >= start_date_param::timestamp WITH TIME ZONE) AND
+        (end_date_param IS NULL OR svh.viewed_at < (end_date_param + INTERVAL '1 day')::timestamp WITH TIME ZONE) AND -- 終了日の翌日0時まで
+        (stock_code_param IS NULL OR svh.stock_code ILIKE ('%' || stock_code_param || '%')) AND
+        (stock_name_param IS NULL OR s.name ILIKE ('%' || stock_name_param || '%'))
+    GROUP BY
+        svh.stock_code,
+        s.name,
+        s.market,
+        s.industry
+    ORDER BY
+        MAX(svh.viewed_at) DESC, -- 次に最新参照日時でソート (件数が同じ場合)
+        COUNT(svh.id) DESC; -- 参照件数が多い順にソート
+END;
+$$;
+
+-- この関数を`authenticated`ロールが実行できるように権限を付与します。
+-- 必要に応じて`anon`ロールにも付与できますが、認証済みのユーザーに限定することが推奨されます。
+GRANT EXECUTE ON FUNCTION public.get_period_stock_views(DATE, DATE, TEXT, TEXT) TO authenticated;
+
+SELECT * FROM public.get_period_stock_views(
+'2025-06-01', -- start_date_param
+'2025-06-07', -- end_date_param
+null,
+null
+);
+
+```
+### get_all_daily_quotes_periods
+```sql
+CREATE OR REPLACE FUNCTION get_all_daily_quotes_periods()
+RETURNS TABLE (
+  code TEXT,
+  min_date TEXT, -- Changed to TEXT to match current "N/A" logic, or use DATE and handle NULLs
+  max_date TEXT  -- Same as above
+)
+LANGUAGE sql
+AS $$
+  SELECT
+    spt_daily_quotes.code,
+    MIN(spt_daily_quotes.date)::TEXT AS min_date,
+    MAX(spt_daily_quotes.date)::TEXT AS max_date
+  FROM
+    spt_daily_quotes
+  GROUP BY
+    spt_daily_quotes.code;
+$$;
+```
+```TypeScript
+'use server'; // これをファイルの先頭に記述することで、Server Actionとして機能します
+
+import { createClient } from '@supabase/supabase-js'; // Supabaseクライアントのインポート
+
+// Supabaseクライアントの初期化
+// Server Actionはサーバーサイドで実行されるため、環境変数を直接安全に利用できます。
+// ただし、Next.jsのServer Actionでは、通常NEXT_PUBLIC_プレフィックスなしの環境変数も利用可能ですが、
+// ここではフロントエンドと共有するためにNEXT_PUBLIC_を使用します。
+// 実際のデプロイ時には、Vercelのプロジェクト設定でこれらの環境変数を設定してください。
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// get_period_stock_views 関数が返す行の型定義
+// これはSupabaseのRPC関数の戻り値の型と一致させる必要があります
+interface PeriodStockView {
+  stock_code: string;
+  stock_name: string;
+  stock_market: string | null; // NULL許容の型に合わせる
+  stock_industry: string | null; // NULL許容の型に合わせる
+  period_view_count: number; // BIGINTはTypeScriptではnumberで扱われることが多い
+  latest_viewed_at_in_period: string; // TIMESTAMP WITH TIME ZONE は通常stringで扱われる
+}
+
+interface GetPeriodStockViewsParams {
+  startDate?: string | null; // YYYY-MM-DD
+  endDate?: string | null;   // YYYY-MM-DD
+  stockCode?: string | null;
+  stockName?: string | null;
+}
+
+/**
+ * 指定された期間とフィルター条件に基づいて、株価参照履歴の集計データを取得するServer Action。
+ * この関数はSupabaseのPostgreSQL関数 'get_period_stock_views' を呼び出します。
+ *
+ * @param params フィルター条件を含むオブジェクト
+ * @returns 集計された株価参照履歴の配列、またはエラーオブジェクト
+ */
+export async function getPeriodStockViewsAction(
+  params: GetPeriodStockViewsParams
+): Promise<PeriodStockView[] | { error: string }> {
+  try {
+    // SupabaseのRPC (Remote Procedure Call) メソッドを使って
+    // PostgreSQL関数 'get_period_stock_views' を呼び出します。
+    // 引数がundefined/nullの場合は、PostgreSQL関数のDEFAULT NULL設定が適用されます。
+    const { data, error } = await supabase.rpc('get_period_stock_views', {
+      start_date_param: params.startDate,
+      end_date_param: params.endDate,
+      stock_code_param: params.stockCode,
+      stock_name_param: params.stockName,
+    });
+
+    // エラーハンドリング
+    if (error) {
+      console.error("Supabase RPC 呼び出しエラー (get_period_stock_views):", error.message);
+      return { error: "参照履歴データの取得に失敗しました。" };
+    }
+
+    // 取得したデータを返す
+    return data as PeriodStockView[]; // 型アサーション
+  } catch (err: unknown) {
+    console.error("Server Action 'getPeriodStockViewsAction' で予期せぬエラー:", err);
+    let errorMessage = "データの取得中にサーバーエラーが発生しました。";
+    if (err instanceof Error) {
+      errorMessage = `データの取得中にサーバーエラーが発生しました: ${err.message}`;
+    } else if (typeof err === "string") {
+      errorMessage = `データの取得中にサーバーエラーが発生しました: ${err}`;
+    }
+    return { error: errorMessage };
+  }
+}
+```
+#### エラーメッセージ仕様
+
+* **データ取得エラー**:
+    * ポップアップホバーでの表示
+    * 「参照履歴の取得中にエラーが発生しました。時間をおいて再度お試しください。」
+
+#### 状態遷移（例：読み込み中／エラー表示）
+
+* **初期状態**: 参照履歴リストは最新の履歴（またはページングの最初のページ）が表示されている。
+* **検索実行中**: 検索ボタンが無効化され、リスト表示領域にローディングスピナーが表示される。
+* **検索結果表示**: 検索条件に合致する履歴がリストに表示される。
+* **検索結果なし**: 「該当する履歴はありません」というメッセージが表示される。
+* **エラー発生時**: ポップアップホバーでの表示
+
 
 # 機能仕様（ユースケース）
 ## 1. 機能一覧
@@ -551,7 +859,82 @@ YahooFinanceAPIからのデータ取得は既存の定義で問題ありませ�
 ## 8.3. メール・通知のトリガーと文面
 
 # データ設計（外部的な観点）
+## 2. データベース側での設計
+```sql
+
+
+-- ユーザーと役割の多対多関連を管理する中間テーブル
+CREATE TABLE user_roles (
+    user_id UUID REFERENCES spt_user(id) ON DELETE CASCADE,
+    role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMPTZ DEFAULT now(), -- 役割が割り当てられた日時 (任意)
+    PRIMARY KEY (user_id, role_id) -- ユーザーIDと役割IDの組み合わせで一意
+);
+
+
+-- Function to insert a new user into spt_user table
+-- This function will be triggered when a new user signs up.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER -- IMPORTANT: Allows the function to operate with definer's privileges, necessary for accessing auth.users
+SET search_path = public -- Ensures the function operates within the public schema context
+AS $$
+BEGIN
+  -- Insert the new user's id and email into the public.spt_user table.
+  -- Tries to get 'name' from the raw_user_meta_data. If 'name' is not provided during signup,
+  -- (NEW.raw_user_meta_data->>'name') will evaluate to NULL, which is acceptable for the nullable 'name' column.
+  INSERT INTO public.spt_user (id, email, name)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'name');
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+```
+
+
+<details>
+  <summary>既存データの移行</summary>
+  <p>これが折りたたまれる内容です。</p>
+  <pre>
+    <code>
+INSERT INTO public.spt_user (id, email, name)
+SELECT
+    u.id,
+    u.email,
+    u.raw_user_meta_data->>'name' AS name -- Extracts 'name' from the user's metadata if available
+FROM
+    auth.users u
+WHERE
+    NOT EXISTS (
+        SELECT 1
+        FROM public.spt_user su
+        WHERE su.id = u.id
+    );
+
+select * from spt_user
+    </code>
+  </pre>
+</details>
+
 ## 1. 主要エンティティとデータ項目
+### テーブル作成時共通の処理
+```sql
+-- スキーマの使用権限 (これは既存であれば再実行しても問題ないです)
+
+-- RLS (Row Level Security) を有効にする場合はここで設定
+ALTER TABLE public.ｘｘｘｘ DISABLE ROW LEVEL SECURITY;
+
+GRANT USAGE ON SCHEMA "public" TO anon;
+GRANT USAGE ON SCHEMA "public" TO authenticated;
+
+-- テーブルへのアクセス権限
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "public" TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "public" TO anon;
+```
 ### spt_daily_quotes
 
 | カラム名        | 型           | 補足                |
@@ -598,6 +981,7 @@ CREATE TABLE spt_stock_view_history (
 
 GRANT USAGE ON SEQUENCE spt_stock_view_history_id_seq TO authenticated;
 
+
 -- インデックスを追加して検索パフォーマンスを向上
 CREATE INDEX idx_spt_stock_view_history_user_id ON spt_stock_view_history (user_id);
 CREATE INDEX idx_spt_stock_view_history_stock_code ON spt_stock_view_history (stock_code);
@@ -606,31 +990,76 @@ CREATE INDEX idx_spt_stock_view_history_viewed_at ON spt_stock_view_history (vie
 -- RLS (Row Level Security) を有効にする場合はここで設定
 ALTER TABLE public.spt_stock_view_history DISABLE ROW LEVEL SECURITY;
 
--- スキーマの使用権限 (これは既存であれば再実行しても問題ないです)
-GRANT USAGE ON SCHEMA "public" TO anon;
-GRANT USAGE ON SCHEMA "public" TO authenticated;
-
--- テーブルへのアクセス権限
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "public" TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "public" TO anon;
 
 ```
-### spt_user
- 
+
+### spt_user テーブル (ユーザー情報)
 |カラム名|型|補足|
 |-------|---|----|
-|id|uuid|主キー|（Supabase認証のauth.usersテーブルのidと連携）。|
-|email|text|ユーザーのメールアドレス。認証に利用されます。|
-|name|text|ユーザーが設定する表示名。|
+|id|UUID|主キー (Supabase認証のauth.users.id と連携)|
+|email|TEXT|ユーザーのメールアドレス (NULL許容、auth.users と同期)|
+|name|TEXT|ユーザーの表示名 (NULL許容)|
+
+
+### roles テーブル (役割マスタ)
+|カラム名|型|補足|
+|-------|---|----|
+|id|SERIAL|主キー (自動採番)|
+|name|TEXT|役割名 (例: 'Manager', 'Member') |UNIQUE NOT NULL|
+|short_name|TEXT|役割名 'MAN', 'MEM','ADMI') |NOT NULL|
+|description	|TEXT	|役割の説明 (任意)|
+|created_at	|TIMESTAMPTZ	|作成日時 (デフォルト: 現在時刻)|
+
+### user_roles テーブル (ユーザーと役割の中間テーブル)
+|カラム名|型|補足|
+|-------|---|----|
+|id|INTEGER|主キー|
+|user_id|UUID|spt_user.id を参照 (ON DELETE CASCADE)|
+|role_id|INTEGER|roles.id を参照 (ON DELETE CASCADE)|
+|assigned_at|TIMESTAMPTZ|役割が割り当てられた日時 (デフォルト: 現在時刻, 任意)|
+
 
 ```sql
-CREATE TABLE stock_user (
+
+
+-- spt_user テーブル (Supabaseの auth.users テーブルと連携することを想定)
+CREATE TABLE spt_user (
     id UUID PRIMARY KEY,
-    email TEXT,
-    name TEXT
+    email TEXT, -- auth.users.email と同期する場合があるため、UNIQUE制約はauth.users側で担保
+    name TEXT  -- 表示名
+    -- created_at TIMESTAMPTZ DEFAULT now(), -- 必要であれば作成日時
+    -- updated_at TIMESTAMPTZ DEFAULT now()  -- 必要であれば更新日時
 );
 
-ALTER TABLE public.spt_daily_quotes DISABLE ROW LEVEL SECURITY;
+-- ユーザー役割を管理するテーブル
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY, -- 自動採番されるID
+    name TEXT UNIQUE NOT NULL, -- 役割名 (例: 'Manager', 'Debugger', 'Member')
+    short_name TEXT , --短縮名、テーブル用
+    description TEXT, -- 役割の説明 (任意)
+    created_at TIMESTAMPTZ DEFAULT now() -- 作成日時
+);
+
+-- 初期データの挿入 (例)
+-- アプリケーションの要件に応じて調整してください。
+INSERT INTO roles (name, description) VALUES
+('Manager', 'MAN','システム全体の管理者権限を持ちます。'),
+('Debugger', 'DEB','開発およびデバッグ用途の特別な権限を持ちます。'),
+('Member', 'MEM','一般のメンバー権限を持ちます。');
+
+
+-- ユーザーと役割の多対多関連を管理する中間テーブル
+CREATE TABLE user_roles (
+    user_id UUID REFERENCES spt_user(id) ON DELETE CASCADE,
+    role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMPTZ DEFAULT now(), -- 役割が割り当てられた日時 (任意)
+    PRIMARY KEY (user_id, role_id) -- ユーザーIDと役割IDの組み合わせで一意
+);
+
+-- テーブルへのアクセス権限 xxxx
+ALTER TABLE public.spt_user DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.roles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_roles DISABLE ROW LEVEL SECURITY;
 
 -- スキーマの使用権限 (これは既存であれば再実行しても問題ないです)
 GRANT USAGE ON SCHEMA "public" TO anon;
@@ -642,17 +1071,17 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "public" TO anon;
 
 ```
 
-### spt_portals
+### spt_portals(ユーザーが作成するポートフォリオ)
 ユーザーが作成するポートフォリオ（銘柄リストのまとまり）を格納するテーブルです
 
-| カラム名      | 型        | 補足                                                                                                                                                    | 
-| ------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | 
+| カラム名      | 型        | 補足| 
+| ------------- | --------- | ----------- | 
 | id            | uuid      | 主キー（Supabaseのgen_random_uuid()などで自動生成）。                                                                                                   | 
 | user_id       | uuid      | ポートフォリオを作成したユーザーのID。stock_usersテーブルのidを参照し、ユーザー削除時にはポートフォリオも削除されます。NOT NULL制約で必須項目とします。 | 
-| name          | text      | ポートフォリオ名。ユーザーごとに一意である必要があります。NOT NULL制約で必須項目とします。                                                              | 
-| memo          | text      | ポートフォリオに関する注釈やメモ（任意項目）。                                                                                                          | 
-| created_at    | timestamp | レコードが挿入された日時。now()で自動的にタイムスタンプが設定されます。                                                                                 | 
-| display_order | integer   | ポートフォリオ一覧での表示順（小さいほど上位に表示）。デフォルト値は0です。                                                                             | 
+| name          | text      | ポートフォリオ名。ユーザーごとに一意である必要があります。NOT NULL制約で必須項目とします。  | 
+| memo          | text      | ポートフォリオに関する注釈やメモ（任意項目）。| 
+| created_at    | timestamp | レコードが挿入された日時。now()で自動的にタイムスタンプが設定されます。 | 
+| display_order | integer   | ポートフォリオ一覧での表示順（小さいほど上位に表示）。デフォルト値は0です。| 
 ```sql
 CREATE TABLE spt_portals (
     id UUID PRIMARY KEY,
@@ -666,11 +1095,12 @@ CREATE TABLE spt_portals (
 
 ```
 
-### spt_portal_stocks（ポータルと銘柄のリレーション：多対多対応）
+### spt_portal_stocks（ポータルと銘柄のリレーション）
+多対多対応  
 spt_portalsテーブルと株銘柄（stock_daily_quotesテーブルに紐づく概念）の多対多のリレーションを管理する中間テーブルです。特定のポートフォリオにどの銘柄が追加されているかを管理します。
 
-| カラム名      | 型        | 補足                                                                                                                                                | 
-| ------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | 
+| カラム名      | 型        | 補足| 
+| ------------- | --------- | --- | 
 | id            | uuid      | 主キー（Supabaseのgen_random_uuid()などで自動生成）。                                                                                               | 
 | portal_id     | uuid      | 関連するポートフォリオのID。stock_portalsテーブルのidを参照し、ポートフォリオ削除時にはこのレコードも削除されます。NOT NULL制約で必須項目とします。 | 
 | stock_code    | text      | ポートフォリオに追加された銘柄のコード（例: '7203'）。NOT NULL制約で必須項目とします。                                                              | 
@@ -697,8 +1127,8 @@ CREATE TABLE spt_portal_stocks (
 
 個々の銘柄（企業）の基本情報
 
-| カラム名     | 型        | 補足                                                                                                         | 
-| ------------ | --------- | ------------------------------------------------------------------------------------------------------------ | 
+| カラム名     | 型        | 補足|
+| ------------ | --------- | --------------------------------- | 
 | code         | text      | 主キー。銘柄コード（例: 7203）。YahooFinanceAPIなどで一意に識別されるコードで、NOT NULL制約で必須項目とします。 | 
 | name         | text      | 銘柄名/会社名（例: トヨタ自動車）。NOT NULL制約で必須項目とします。 | 
 | market       | text      | 上場市場（例: 東証プライム, ナスダック など）。任意項目。| 
@@ -722,7 +1152,7 @@ CREATE TABLE spt_stocks (
 
 ```
 
-### `spt_company_stock_details`
+### spt_company_stock_details（株式の詳細）
 
 | カラム名             | 型           | 説明                |
 | ---------------- | ----------- | ----------------- |
@@ -777,6 +1207,7 @@ CREATE TABLE public.spt_company_stock_details (
 );
 
 ALTER TABLE public.spt_company_stock_details DISABLE ROW LEVEL SECURITY;
+
 
 ```
 

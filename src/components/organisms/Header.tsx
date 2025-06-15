@@ -31,12 +31,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ChevronDown, LogIn, LogOut } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { signOut } from "@/app/actions/auth";
+import { SigninDialog } from "./SigninDialog";
 
 export function Header() {
   const { user, loading } = useAuth(); // ★ Context からユーザー情報とローディング状態を取得
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
+  const [isSigninDialogOpen, setIsSigninDialogOpen] = useState(false); // ★ SigninDialog用のstate
+  // const { userName, setUserName } = useState("");
+
   const router = useRouter(); // ★ router インスタンスを取得
-  const username = user ? user.username : "";
+  const username = user ? user.user_metadata?.name || "Guest" : "Guest";
 
   // ★ ログイン/ログアウト時にダイアログを閉じる処理 (必要であれば useAuth の user 変更を監視する useEffect を追加)
   React.useEffect(() => {
@@ -45,7 +49,15 @@ export function Header() {
       setIsLoginDialogOpen(false);
     }
   }, [user]); // user の変化を監視
+  const handleOpenSigninDialog = () => {
+    setIsLoginDialogOpen(false); // ログインダイアログを閉じる
+    setIsSigninDialogOpen(true); // サインインダイアログを開く
+  };
 
+  const handleOpenLoginDialog = () => {
+    setIsSigninDialogOpen(false); // サインインダイアログを閉じる
+    setIsLoginDialogOpen(true); // ログインダイアログを開く
+  };
   //  ログアウト処理
   const handleSignOut = async () => {
     await signOut();
@@ -116,9 +128,16 @@ export function Header() {
           <div className="flex items-center space-x-4">
             {/* ログイン・ログアウトUIなど */}
             {loading ? (
-              <div className="h-9 w-90 animate-pulse rounded-md bg-muted flex items-center justify-end">
-                読み取り中・・・
-              </div>
+              <>
+                <div className="h-9 w-90 animate-pulse rounded-md bg-muted flex items-center justify-end">
+                  読み取り中・・・
+                  <Button variant="outline" onClick={handleSignOut}>
+                    LogOut
+                    <LogOut className="h-5 w-5" />
+                    <span className="sr-only">ログアウト</span>
+                  </Button>
+                </div>
+              </>
             ) : user ? (
               <>
                 <span className="hidden sm:inline-block text-sm text-muted-foreground truncate max-w-[90px]">
@@ -167,6 +186,13 @@ export function Header() {
       <LoginDialog
         open={isLoginDialogOpen}
         onOpenChange={setIsLoginDialogOpen}
+        onSwitchToSignin={handleOpenSigninDialog} // ★ propsを渡す
+      />
+      <SigninDialog
+        open={isSigninDialogOpen}
+        onOpenChange={setIsSigninDialogOpen}
+        onSwitchToLogin={handleOpenLoginDialog} // ★ propsを渡す
+        // 必要であれば、サインインからログインへ戻るための onSwitchToLogin も実装
       />
     </>
   );

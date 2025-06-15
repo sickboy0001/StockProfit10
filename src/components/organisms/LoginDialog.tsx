@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,8 +19,13 @@ import { useRouter } from "next/navigation";
 interface LoginDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSwitchToSignin: () => void; // ★ サインインダイアログ表示切り替え用のコールバックを追加
 }
-export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
+export function LoginDialog({
+  open,
+  onOpenChange,
+  onSwitchToSignin,
+}: LoginDialogProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false); // ローディング状態を追加
@@ -54,6 +58,10 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
     if (event.key === "Enter" && !isLoading) {
       handleLogin();
     }
+  };
+  const handleSwitchDialog = () => {
+    onOpenChange(false); // 現在のログインダイアログを閉じる
+    onSwitchToSignin(); // サインインダイアログを開く処理を呼び出す
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,22 +103,38 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
             />
           </div>
         </div>
-        <DialogFooter className="sm:justify-between items-center">
-          {" "}
-          {/* レイアウト調整 */}
-          <Link
-            href="/signin"
-            className="text-sm text-blue-600 hover:underline"
+        {/* DialogFooterを使用して、関連アクションをまとめ、レイアウトを調整します */}
+        <DialogFooter className="flex-col items-stretch gap-y-4 pt-4 sm:flex-col sm:items-stretch">
+          {/* リンクボタンを縦に並べるためのコンテナ */}
+          <div className="flex flex-col items-start gap-y-1">
+            <Button
+              variant="link"
+              className="text-sm text-blue-600 hover:underline p-0 h-auto justify-start"
+              onClick={() => {
+                onOpenChange(false); // ダイアログを閉じる
+                router.push("/user/forgot-password"); // パスワードリセットページへ遷移
+              }}
+              disabled={isLoading}
+            >
+              パスワードをお忘れですか？
+            </Button>
+            <Button
+              variant="link"
+              className="text-sm text-blue-600 hover:underline p-0 h-auto justify-start"
+              onClick={handleSwitchDialog}
+              disabled={isLoading}
+            >
+              アカウントをお持ちでないですか？ サインアップ
+            </Button>
+          </div>
+          {/* ログインボタン */}
+          <Button
+            type="button"
+            onClick={handleLogin}
+            disabled={isLoading}
+            className="w-full"
           >
-            アカウントをお持ちでないですか？ サインイン
-          </Link>
-          {/* DialogClose で囲むとキャンセルボタンになる */}
-          {/* <DialogClose asChild>
-          <Button type="button" variant="secondary">キャンセル</Button>
-          </DialogClose> */}
-          <Button type="button" onClick={handleLogin} disabled={isLoading}>
-            {/* ★ ローディング中は無効化 */}
-            ログイン
+            {isLoading ? "処理中..." : "ログイン"}
           </Button>
         </DialogFooter>
       </DialogContent>

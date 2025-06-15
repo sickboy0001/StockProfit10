@@ -34,6 +34,12 @@ export const headerNavItems: NavItem[] = [
     href: "/stock/MasterImportJsx",
   },
   {
+    id: "StockHistroyViewManger",
+    type: "link",
+    label: "StockHistory",
+    href: "/Manager/HistoryManager",
+  },
+  {
     id: "ConvetSptStock",
     type: "link",
     label: "ConvertSptStock",
@@ -53,6 +59,12 @@ export const headerNavItems: NavItem[] = [
     items: [
       { id: "Mantenance", label: "mantenance", href: "/habit/manager" },
       { id: "jsxconvert", label: "import", href: "/convert/jsx" },
+      { id: "userProfile", label: "profile", href: "/user/profile" },
+      {
+        id: "AdminUserList",
+        label: "UserList",
+        href: "/Manager/UserList",
+      },
       // { id: "docs", href: "/docs", label: "ドキュメント" },
       // { id: "settings", href: "/settings", label: "設定" },
       // { id: "profile", href: "/profile", label: "プロフィール" },

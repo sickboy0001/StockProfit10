@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const updateUserState = async (supabaseUser: User | null) => {
       // Supabaseからユーザー情報が取得できない、またはメールアドレスがない場合は、
       // アプリケーションの拡張機能にとっては完全に認証されていないとみなす
-      if (supabaseUser === null || supabaseUser.email === null) {
+      if (supabaseUser === null || supabaseUser?.email === null) {
         setUser(null);
         setLoading(false);
         console.log(
@@ -42,11 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Supabaseのユーザーオブジェクトを元に拡張する
       const extendedUser: User = { ...supabaseUser }; // ここでは supabaseUser とその email は null ではない
+      console.log("AuthContext extendedUser", extendedUser);
 
-      if (extendedUser.email == undefined) {
-        console.error(
-          "AuthProvider: ユーザーの取得に失敗しました。extendedUser.email == undefinedです。"
-        );
+      if (extendedUser === null || extendedUser.email == undefined) {
         setUser(supabaseUser);
         setLoading(false);
         return;

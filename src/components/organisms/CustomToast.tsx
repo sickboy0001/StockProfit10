@@ -1,4 +1,3 @@
-// src/components/molecules/SuccessToastWithEditButton.tsx
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner"; // toast.dismiss を使用するため

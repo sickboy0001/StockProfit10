@@ -59,7 +59,6 @@ async function fetchAllJpxCompanyMasterData(
     "[fetchAllJpxCompanyMasterData] Fetching all data from jpx_company_master with pagination..."
   );
 
-  // eslint-disable-next-line no-constant-condition
   while (allData.length < totalCount) {
     const { data, error, count } = await supabaseClient
       .from("jpx_company_master")

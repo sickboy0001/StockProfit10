@@ -1,6 +1,7 @@
 // app/action/UserRole.ts
 "use server"; // Server Actionであることを示す
 
+import { User as AppUser } from "@/types/user"; // User型をAppUserとしてインポート
 import { createClient } from "@supabase/supabase-js";
 
 // Supabaseクライアントの初期化
@@ -133,6 +134,54 @@ export async function fetchAllRolesAction(): Promise<{
 }
 
 /**
+ * 全ての役割情報に加えて、固定の管理者ロール情報を追加して取得するServer Action。
+ * "Administrator" (ADMIN) ロールをリストの先頭に追加します。
+ *
+ * @returns 役割データの配列（管理者ロール追加済み）、またはエラーメッセージ。
+ */
+export async function fetchAllRolesAddAdminAction(): Promise<{
+  data: Role[];
+  error: string | null;
+}> {
+  try {
+    // まず既存のロールを取得
+    const { data: existingRoles, error: fetchError } =
+      await fetchAllRolesAction();
+
+    if (fetchError) {
+      // fetchAllRolesAction でエラーが発生した場合はそのまま返す
+      return { data: [], error: fetchError };
+    }
+
+    // 追加する管理者ロール情報
+    // IDは既存のロールと衝突しないように、またクライアント側で特別扱いできるように負の値を割り当てる例
+    const adminRole: Role = {
+      id: -1, // このIDはクライアント側でのみ意味を持つ一時的なもの
+      name: "Administrator",
+      short_name: "ADMIN",
+      description: "システム全体の管理者権限を持ちます。",
+    };
+
+    // 既存のロールリストの先頭に管理者ロールを追加
+    const rolesWithAdmin = [adminRole, ...existingRoles];
+
+    return { data: rolesWithAdmin, error: null };
+  } catch (err: unknown) {
+    console.error(
+      "Server Action 'fetchAllRolesAddAdminAction' で予期せぬエラー:",
+      err
+    );
+    let errorMessage = "不明なエラー";
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    }
+    return {
+      data: [],
+      error: `サーバーエラー: ${errorMessage}`,
+    };
+  }
+}
+/**
  * ユーザーの役割を更新するServer Action。
  * 既存の役割を全て削除し、新しい役割を挿入します。
  *
@@ -206,5 +255,64 @@ export async function updateUserRolesAction(
       success: false,
       error: `サーバーエラー: ${errorMessage}`,
     };
+  }
+}
+
+/// 遅いようなら、専用のDB関数を作る
+export async function getUserByEmail(email: string) {
+  const { data, error } = await supabase.rpc(
+    "get_users_with_roles_and_status",
+    {
+      p_email: email,
+      p_limit: 1,
+      p_offset: 0,
+    }
+  );
+
+  if (error) {
+    console.error("Error fetching user by email:", error);
+    return null;
+  }
+
+  // 取得したデータは配列なので、最初の要素を返す
+  return data && data.length > 0 ? data[0] : null;
+}
+
+/**
+ * メールアドレスでユーザー情報を取得し、スーパーユーザーであれば"Administrator"ロールを追加するServer Action。
+ *
+ * @param authUser AuthContextから取得するようなユーザーオブジェクト。emailとisSuperUserプロパティを持つことを期待。
+ * @returns 加工後のUserWithRolesオブジェクト、またはnull。
+ */
+export async function getUserByEmailAddRoleAdmin(
+  authUser: AppUser | null // 型をAppUserに変更
+): Promise<UserWithRoles | null> {
+  if (!authUser || !authUser.email) {
+    console.error(
+      "[getUserByEmailAddRoleAdmin] Invalid authUser or email is missing."
+    );
+    return null;
+  }
+
+  try {
+    const userDetail = await getUserByEmail(authUser.email);
+
+    if (userDetail && authUser.isSuperUser) {
+      // user_roles が配列でなければ初期化
+      if (!Array.isArray(userDetail.user_roles)) {
+        userDetail.user_roles = [];
+      }
+      // "Administrator" がまだ含まれていなければ追加
+      if (!userDetail.user_roles.includes("Administrator")) {
+        userDetail.user_roles.push("Administrator");
+      }
+    }
+    return userDetail;
+  } catch (error) {
+    console.error(
+      "[getUserByEmailAddRoleAdmin] Error processing user details:",
+      error
+    );
+    return null;
   }
 }

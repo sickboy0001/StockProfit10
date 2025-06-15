@@ -4,6 +4,7 @@
 interface NavItemBase {
   id: string; // keyとして使用するための一意なID
   label: string;
+  roles?: string[];
 }
 
 interface NavLinkItem extends NavItemBase {
@@ -13,7 +14,7 @@ interface NavLinkItem extends NavItemBase {
 
 interface NavDropdownItem extends NavItemBase {
   type: "dropdown";
-  items: Array<{ id: string; href: string; label: string }>;
+  items: Array<{ id: string; href: string; label: string; roles?: string[] }>;
 }
 
 export type NavItem = NavLinkItem | NavDropdownItem;
@@ -21,29 +22,13 @@ export type NavItem = NavLinkItem | NavDropdownItem;
 // メニューデータ
 export const headerNavItems: NavItem[] = [
   // { id: "Done", type: "link", label: "done", href: "/habit/done" },
-  {
-    id: "apiTest",
-    type: "link",
-    label: "apiTest",
-    href: "/stock/ApiDataViewer",
-  },
-  {
-    id: "ImportJsx",
-    type: "link",
-    label: "ImportJsx",
-    href: "/stock/MasterImportJsx",
-  },
+
   {
     id: "StockHistroyViewManger",
     type: "link",
     label: "StockHistory",
+    roles: ["ADMIN", "MAN", "MEN", "DEB"],
     href: "/Manager/HistoryManager",
-  },
-  {
-    id: "ConvetSptStock",
-    type: "link",
-    label: "ConvertSptStock",
-    href: "/stock/ConvertToStocks",
   },
   {
     id: "ChatTest",
@@ -57,17 +42,34 @@ export const headerNavItems: NavItem[] = [
     type: "dropdown",
     label: "メニュー",
     items: [
-      { id: "Mantenance", label: "mantenance", href: "/habit/manager" },
-      { id: "jsxconvert", label: "import", href: "/convert/jsx" },
-      { id: "userProfile", label: "profile", href: "/user/profile" },
+      {
+        id: "apiTest",
+        label: "apiTest",
+        href: "/stock/ApiDataViewer",
+      },
+      {
+        id: "ImportJsx",
+        label: "ImportJsx",
+        roles: ["ADMIN", "MAN", "MEN", "DEB"],
+        href: "/stock/MasterImportJsx",
+      },
+      {
+        id: "userProfile",
+        label: "profile",
+        href: "/user/profile",
+      },
       {
         id: "AdminUserList",
         label: "UserList",
+        roles: ["ADMIN", "MAN", "MEN", "DEB"],
         href: "/Manager/UserList",
       },
-      // { id: "docs", href: "/docs", label: "ドキュメント" },
-      // { id: "settings", href: "/settings", label: "設定" },
-      // { id: "profile", href: "/profile", label: "プロフィール" },
+      {
+        id: "ConvetSptStock",
+        label: "ConvertSptStock",
+        roles: ["ADMIN", "MAN", "MEN", "DEB"],
+        href: "/stock/ConvertToStocks",
+      },
     ],
   },
 ];

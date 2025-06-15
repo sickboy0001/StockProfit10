@@ -448,83 +448,6 @@ Superユーザーは、アプリケーションのユーザーを管理する権
 
 
 
-```sql
--- public.get_users_with_roles_and_status(): ユーザー一覧と役割情報を取得
--- 管理画面表示用に、ユーザー名、メール、役割、ステータスでフィルタリングし、ページネーションも考慮
-CREATE OR REPLACE FUNCTION public.get_users_with_roles_and_status(
-    p_user_name TEXT DEFAULT NULL,
-    p_email TEXT DEFAULT NULL,
-    p_role_ids INTEGER[] DEFAULT NULL, -- 役割IDの配列（フィルタリング用）
-    p_status BOOLEAN DEFAULT NULL,     -- True: 有効 (メール確認済み), False: 無効 (メール未確認/無効化)
-    p_limit INTEGER DEFAULT 10,
-    p_offset INTEGER DEFAULT 0
-)
-RETURNS TABLE (
-    user_id UUID,
-    user_name TEXT,
-    user_email TEXT,
-    user_roles TEXT[], -- ロール名の配列
-    is_active BOOLEAN, -- ユーザーのステータス (email_confirmed_atを基に判断)
-    registered_at TIMESTAMPTZ,
-    last_signed_in_at TIMESTAMPTZ,
-    total_count BIGINT -- フィルタリング後の総ユーザー数 (ページネーション用)
-)
-LANGUAGE plpgsql
-SECURITY DEFINER -- IMPORTANT: auth.usersテーブルへのアクセスが必要なため、定義者の権限で実行
-SET search_path = public, auth -- authスキーマを検索パスに追加
-AS $$
-DECLARE
-    _total_count BIGINT;
-BEGIN
-    -- フィルタリング後の総ユーザー数を計算 (ページネーションの合計ページ数算出に必要)
-    SELECT COUNT(DISTINCT au.id)
-    INTO _total_count
-    FROM auth.users au
-    JOIN public.spt_user su ON au.id = su.id
-    LEFT JOIN public.user_roles ur ON su.id = ur.user_id
-    LEFT JOIN public.roles r ON ur.role_id = r.id
-    WHERE
-        (p_user_name IS NULL OR su.name ILIKE '%' || p_user_name || '%') AND
-        (p_email IS NULL OR au.email ILIKE '%' || p_email || '%') AND
-        (p_role_ids IS NULL OR r.id = ANY(p_role_ids)) AND -- 役割IDでフィルタ
-        (p_status IS NULL OR (au.email_confirmed_at IS NOT NULL) = p_status)
-    ;
-
-    RETURN QUERY
-    SELECT
-        au.id AS user_id,
-        su.name AS user_name,
-        au.email AS user_email,
-        -- ARRAY_AGGで重複しない役割名を配列として取得
-        ARRAY_AGG(DISTINCT r.name ORDER BY r.name) FILTER (WHERE r.name IS NOT NULL) AS user_roles,
-        (au.email_confirmed_at IS NOT NULL) AS is_active, -- email_confirmed_atが存在すれば有効とみなす
-        au.created_at AS registered_at,
-        au.last_sign_in_at,
-        _total_count -- 各行に総数を付与
-    FROM
-        auth.users au
-    JOIN
-        public.spt_user su ON au.id = su.id
-    LEFT JOIN
-        public.user_roles ur ON su.id = ur.user_id
-    LEFT JOIN
-        public.roles r ON ur.role_id = r.id
-    WHERE
-        (p_user_name IS NULL OR su.name ILIKE '%' || p_user_name || '%') AND
-        (p_email IS NULL OR au.email ILIKE '%' || p_email || '%') AND
-        (p_role_ids IS NULL OR r.id = ANY(p_role_ids)) AND
-        (p_status IS NULL OR (au.email_confirmed_at IS NOT NULL) = p_status)
-    GROUP BY
-        au.id, su.name, au.email, au.created_at, au.last_sign_in_at
-    ORDER BY
-        au.created_at DESC -- 登録日時で降順ソート
-    LIMIT p_limit OFFSET p_offset;
-END;
-$$;
--- authenticated ユーザーがこの関数を実行できるようにします
-GRANT EXECUTE ON FUNCTION public.get_users_with_roles_and_status(TEXT, TEXT, INTEGER[], BOOLEAN, INTEGER, INTEGER) TO authenticated;
-
-```
 ### 画面詳細：StocksViewHistory
 
 #### ワイヤーフレーム（またはモック）
@@ -581,90 +504,6 @@ GRANT EXECUTE ON FUNCTION public.get_users_with_roles_and_status(TEXT, TEXT, INT
     * 各行の「チャート」列にあるボタンをクリックすると、その銘柄の株価チャート画面（`stock_chart` 画面）へ遷移する。
     * 遷移時には、対象銘柄のコードをパラメータとして渡す。
 
-### get_period_stock_views
-
-```sql
--- Supabase PostgreSQL Function: get_period_stock_views
--- 指定された期間内の株価参照履歴を集計し、
--- 銘柄コード、銘柄名、市場、業種、期間内の参照件数、期間内最新参照日時を返します。
-
-CREATE OR REPLACE FUNCTION public.get_period_stock_views(
-    start_date_param DATE DEFAULT NULL, -- 期間の開始日 (NULLの場合、期間を考慮しない)
-    end_date_param DATE DEFAULT NULL,   -- 期間の終了日 (NULLの場合、期間を考慮しない)
-    stock_code_param TEXT DEFAULT NULL, -- 銘柄コードのフィルタ (NULLの場合、フィルタしない)
-    stock_name_param TEXT DEFAULT NULL  -- 銘柄名のフィルタ (NULLの場合、フィルタしない)
-)
-RETURNS TABLE (
-    stock_code TEXT,
-    stock_name TEXT,
-    stock_market TEXT,
-    stock_industry TEXT,
-    period_view_count BIGINT,
-    latest_viewed_at_in_period TIMESTAMP WITH TIME ZONE
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        svh.stock_code,
-        s.name AS stock_name,
-        s.market AS stock_market,
-        s.industry AS stock_industry,
-        COUNT(svh.id) AS period_view_count,
-        MAX(svh.viewed_at) AS latest_viewed_at_in_period
-    FROM
-        public.spt_stock_view_history AS svh
-    JOIN
-        public.spt_stocks AS s ON svh.stock_code = s.code
-    WHERE
-        (start_date_param IS NULL OR svh.viewed_at >= start_date_param::timestamp WITH TIME ZONE) AND
-        (end_date_param IS NULL OR svh.viewed_at < (end_date_param + INTERVAL '1 day')::timestamp WITH TIME ZONE) AND -- 終了日の翌日0時まで
-        (stock_code_param IS NULL OR svh.stock_code ILIKE ('%' || stock_code_param || '%')) AND
-        (stock_name_param IS NULL OR s.name ILIKE ('%' || stock_name_param || '%'))
-    GROUP BY
-        svh.stock_code,
-        s.name,
-        s.market,
-        s.industry
-    ORDER BY
-        MAX(svh.viewed_at) DESC, -- 次に最新参照日時でソート (件数が同じ場合)
-        COUNT(svh.id) DESC; -- 参照件数が多い順にソート
-END;
-$$;
-
--- この関数を`authenticated`ロールが実行できるように権限を付与します。
--- 必要に応じて`anon`ロールにも付与できますが、認証済みのユーザーに限定することが推奨されます。
-GRANT EXECUTE ON FUNCTION public.get_period_stock_views(DATE, DATE, TEXT, TEXT) TO authenticated;
-
-SELECT * FROM public.get_period_stock_views(
-'2025-06-01', -- start_date_param
-'2025-06-07', -- end_date_param
-null,
-null
-);
-
-```
-### get_all_daily_quotes_periods
-```sql
-CREATE OR REPLACE FUNCTION get_all_daily_quotes_periods()
-RETURNS TABLE (
-  code TEXT,
-  min_date TEXT, -- Changed to TEXT to match current "N/A" logic, or use DATE and handle NULLs
-  max_date TEXT  -- Same as above
-)
-LANGUAGE sql
-AS $$
-  SELECT
-    spt_daily_quotes.code,
-    MIN(spt_daily_quotes.date)::TEXT AS min_date,
-    MAX(spt_daily_quotes.date)::TEXT AS max_date
-  FROM
-    spt_daily_quotes
-  GROUP BY
-    spt_daily_quotes.code;
-$$;
-```
 ```TypeScript
 'use server'; // これをファイルの先頭に記述することで、Server Actionとして機能します
 
@@ -861,8 +700,6 @@ YahooFinanceAPIからのデータ取得は既存の定義で問題ありませ�
 # データ設計（外部的な観点）
 ## 2. データベース側での設計
 ```sql
-
-
 -- ユーザーと役割の多対多関連を管理する中間テーブル
 CREATE TABLE user_roles (
     user_id UUID REFERENCES spt_user(id) ON DELETE CASCADE,
@@ -870,30 +707,8 @@ CREATE TABLE user_roles (
     assigned_at TIMESTAMPTZ DEFAULT now(), -- 役割が割り当てられた日時 (任意)
     PRIMARY KEY (user_id, role_id) -- ユーザーIDと役割IDの組み合わせで一意
 );
-
-
--- Function to insert a new user into spt_user table
--- This function will be triggered when a new user signs up.
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER -- IMPORTANT: Allows the function to operate with definer's privileges, necessary for accessing auth.users
-SET search_path = public -- Ensures the function operates within the public schema context
-AS $$
-BEGIN
-  -- Insert the new user's id and email into the public.spt_user table.
-  -- Tries to get 'name' from the raw_user_meta_data. If 'name' is not provided during signup,
-  -- (NEW.raw_user_meta_data->>'name') will evaluate to NULL, which is acceptable for the nullable 'name' column.
-  INSERT INTO public.spt_user (id, email, name)
-  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'name');
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
+
 
 
 <details>
@@ -1358,16 +1173,223 @@ importjpx01.html：
 そこから、Xmlを開いて、全選択して、インポート画面へコピー
 
 
-- ER図
+### Supabase PostgreSQL Function
+できるだけ利用しないようにする。**Server Actions**をできるだけ利用する。
+- /app/actions/stock.ts (Server Actions) 「フォームの送信」や「データ変更」など、特定のUI操作に紐づくサーバーサイドの処理に特化しています。
+- /api/stock.ts (Route Handler) 従来のAPIルート（Pages Routerのpages/apiに相当）のApp Router版です。
+#### get_period_stock_views
+- Supabase PostgreSQL Function: get_period_stock_views
+- 指定された期間内の株価参照履歴を集計し、
+- 銘柄コード、銘柄名、市場、業種、期間内の参照件数、期間内最新参照日時を返します。
 
-```mermaid
-erDiagram
-    users ||--o{ spt_portals : ""
-    spt_portals ||--o{ spt_portal_stocks : ""
-    spt_portal_stocks }|--|| stocks : ""
-    stocks ||--o{ spt_daily_quotes : ""
+
+```sql
+-- Supabase PostgreSQL Function: get_period_stock_views
+-- 指定された期間内の株価参照履歴を集計し、
+-- 銘柄コード、銘柄名、市場、業種、期間内の参照件数、期間内最新参照日時を返します。
+
+CREATE OR REPLACE FUNCTION public.get_period_stock_views(
+    start_date_param DATE DEFAULT NULL, -- 期間の開始日 (NULLの場合、期間を考慮しない)
+    end_date_param DATE DEFAULT NULL,   -- 期間の終了日 (NULLの場合、期間を考慮しない)
+    stock_code_param TEXT DEFAULT NULL, -- 銘柄コードのフィルタ (NULLの場合、フィルタしない)
+    stock_name_param TEXT DEFAULT NULL  -- 銘柄名のフィルタ (NULLの場合、フィルタしない)
+)
+RETURNS TABLE (
+    stock_code TEXT,
+    stock_name TEXT,
+    stock_market TEXT,
+    stock_industry TEXT,
+    period_view_count BIGINT,
+    latest_viewed_at_in_period TIMESTAMP WITH TIME ZONE
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        svh.stock_code,
+        s.name AS stock_name,
+        s.market AS stock_market,
+        s.industry AS stock_industry,
+        COUNT(svh.id) AS period_view_count,
+        MAX(svh.viewed_at) AS latest_viewed_at_in_period
+    FROM
+        public.spt_stock_view_history AS svh
+    JOIN
+        public.spt_stocks AS s ON svh.stock_code = s.code
+    WHERE
+        (start_date_param IS NULL OR svh.viewed_at >= start_date_param::timestamp WITH TIME ZONE) AND
+        (end_date_param IS NULL OR svh.viewed_at < (end_date_param + INTERVAL '1 day')::timestamp WITH TIME ZONE) AND -- 終了日の翌日0時まで
+        (stock_code_param IS NULL OR svh.stock_code ILIKE ('%' || stock_code_param || '%')) AND
+        (stock_name_param IS NULL OR s.name ILIKE ('%' || stock_name_param || '%'))
+    GROUP BY
+        svh.stock_code,
+        s.name,
+        s.market,
+        s.industry
+    ORDER BY
+        MAX(svh.viewed_at) DESC, -- 次に最新参照日時でソート (件数が同じ場合)
+        COUNT(svh.id) DESC; -- 参照件数が多い順にソート
+END;
+$$;
+
+-- この関数を`authenticated`ロールが実行できるように権限を付与します。
+-- 必要に応じて`anon`ロールにも付与できますが、認証済みのユーザーに限定することが推奨されます。
+GRANT EXECUTE ON FUNCTION public.get_period_stock_views(DATE, DATE, TEXT, TEXT) TO authenticated;
+
+SELECT * FROM public.get_period_stock_views(
+'2025-06-01', -- start_date_param
+'2025-06-07', -- end_date_param
+null,
+null
+);
 
 ```
+
+#### handle_new_user
+- Supabase PostgreSQL Function: handle_new_user
+- ユーザー作成時、sp_user作成するためのトリガー
+```sql
+-- Function to insert a new user into spt_user table
+-- This function will be triggered when a new user signs up.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER -- IMPORTANT: Allows the function to operate with definer's privileges, necessary for accessing auth.users
+SET search_path = public -- Ensures the function operates within the public schema context
+AS $$
+BEGIN
+  -- Insert the new user's id and email into the public.spt_user table.
+  -- Tries to get 'name' from the raw_user_meta_data. If 'name' is not provided during signup,
+  -- (NEW.raw_user_meta_data->>'name') will evaluate to NULL, which is acceptable for the nullable 'name' column.
+  INSERT INTO public.spt_user (id, email, name)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'name');
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+```
+
+
+#### get_all_daily_quotes_periods
+- Supabase PostgreSQL Function: get_all_daily_quotes_periods
+- 株価データ取得の期間を取得する関数
+
+```sql
+CREATE OR REPLACE FUNCTION get_all_daily_quotes_periods()
+RETURNS TABLE (
+  code TEXT,
+  min_date TEXT, -- Changed to TEXT to match current "N/A" logic, or use DATE and handle NULLs
+  max_date TEXT  -- Same as above
+)
+LANGUAGE sql
+AS $$
+  SELECT
+    spt_daily_quotes.code,
+    MIN(spt_daily_quotes.date)::TEXT AS min_date,
+    MAX(spt_daily_quotes.date)::TEXT AS max_date
+  FROM
+    spt_daily_quotes
+  GROUP BY
+    spt_daily_quotes.code;
+$$;
+```
+
+
+#### get_users_with_roles_and_status
+- public.get_users_with_roles_and_status(): ユーザー一覧と役割情報を取得
+- 管理画面表示用に、ユーザー名、メール、役割、ステータスでフィルタリングし、ページネーションも考慮
+
+```sql
+
+
+-- DROP FUNCTION public.get_users_with_roles_and_status(text,text,integer[],boolean,integer,integer);
+CREATE OR REPLACE FUNCTION public.get_users_with_roles_and_status(
+    p_user_name TEXT DEFAULT NULL,
+    p_email TEXT DEFAULT NULL,
+    p_role_ids INTEGER[] DEFAULT NULL, -- 役割IDの配列（フィルタリング用）
+    p_status BOOLEAN DEFAULT NULL,     -- True: 有効 (メール確認済み), False: 無効 (メール未確認/無効化)
+    p_limit INTEGER DEFAULT 10,
+    p_offset INTEGER DEFAULT 0
+)
+RETURNS TABLE (
+    user_id UUID,
+    user_name TEXT,
+    user_email TEXT,
+    user_roles TEXT[], -- ロール名の配列
+    is_active BOOLEAN, -- ユーザーのステータス (email_confirmed_atを基に判断)
+    registered_at TIMESTAMPTZ,
+    last_signed_in_at TIMESTAMPTZ,
+    total_count BIGINT -- フィルタリング後の総ユーザー数 (ページネーション用)
+)
+LANGUAGE plpgsql
+SECURITY DEFINER -- IMPORTANT: auth.usersテーブルへのアクセスが必要なため、定義者の権限で実行
+SET search_path = public, auth -- authスキーマを検索パスに追加
+AS $$
+DECLARE
+    _total_count BIGINT;
+BEGIN
+    -- フィルタリング後の総ユーザー数を計算 (ページネーションの合計ページ数算出に必要)
+    SELECT COUNT(DISTINCT au.id)
+    INTO _total_count
+    FROM auth.users au
+    JOIN public.spt_user su ON au.id = su.id
+    LEFT JOIN public.user_roles ur ON su.id = ur.user_id
+    LEFT JOIN public.roles r ON ur.role_id = r.id
+    WHERE
+        (p_user_name IS NULL OR su.name ILIKE '%' || p_user_name || '%') AND
+        (p_email IS NULL OR au.email ILIKE '%' || p_email || '%') AND
+        (p_role_ids IS NULL OR r.id = ANY(p_role_ids)) AND -- 役割IDでフィルタ
+        (p_status IS NULL OR (au.email_confirmed_at IS NOT NULL) = p_status)
+    ;
+
+    RETURN QUERY
+    SELECT
+        au.id AS user_id,
+        su.name AS user_name,
+        au.email::text AS user_email,
+        -- ARRAY_AGGで重複しない役割名を配列として取得
+        ARRAY_AGG(DISTINCT r.name ORDER BY r.name) FILTER (WHERE r.name IS NOT NULL) AS user_roles,
+        (au.email_confirmed_at IS NOT NULL) AS is_active, -- email_confirmed_atが存在すれば有効とみなす
+        au.created_at AS registered_at,
+        au.last_sign_in_at,
+        _total_count -- 各行に総数を付与
+    FROM
+        auth.users au
+    JOIN
+        public.spt_user su ON au.id = su.id
+    LEFT JOIN
+        public.user_roles ur ON su.id = ur.user_id
+    LEFT JOIN
+        public.roles r ON ur.role_id = r.id
+    WHERE
+        (p_user_name IS NULL OR su.name ILIKE '%' || p_user_name || '%') AND
+        (p_email IS NULL OR au.email ILIKE '%' || p_email || '%') AND
+        (p_role_ids IS NULL OR r.id = ANY(p_role_ids)) AND
+        (p_status IS NULL OR (au.email_confirmed_at IS NOT NULL) = p_status)
+    GROUP BY
+        au.id, su.name, au.email, au.created_at, au.last_sign_in_at
+    ORDER BY
+        au.created_at DESC -- 登録日時で降順ソート
+    LIMIT p_limit OFFSET p_offset;
+END;
+$$;
+-- authenticated ユーザーがこの関数を実行できるようにします
+GRANT EXECUTE ON FUNCTION public.get_users_with_roles_and_status(TEXT, TEXT, INTEGER[], BOOLEAN, INTEGER, INTEGER) TO authenticated;
+
+
+select * from    get_users_with_roles_and_status(null , 'syunjyu0001@gmail.com',null , null , 1,0)
+
+
+```
+
+
+- ER図
+
+
 ```mermaid
 graph LR
     A[users] -->|1対N| B(spt_portals)

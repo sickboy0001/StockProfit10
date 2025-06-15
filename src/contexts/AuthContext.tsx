@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Supabaseのユーザーオブジェクトを元に拡張する
       const extendedUser: User = { ...supabaseUser }; // ここでは supabaseUser とその email は null ではない
-      console.log("AuthContext extendedUser", extendedUser);
+      // console.log("AuthContext extendedUser", extendedUser);
 
       if (extendedUser === null || extendedUser.email == undefined) {
         setUser(supabaseUser);
@@ -79,10 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const {
         data: { user: supabaseAuthUser },
       } = await supabase.auth.getUser();
-      console.log(
-        "AuthProvider: supabase.auth.getUser() の結果:",
-        supabaseAuthUser
-      );
+      // console.log(
+      //   "AuthProvider: supabase.auth.getUser() の結果:",
+      //   supabaseAuthUser
+      // );
       await updateUserState(supabaseAuthUser as User | null);
     };
 

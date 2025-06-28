@@ -1,4 +1,4 @@
-"use client";
+// "use client";
 // components/domain/Portfolio/PagePortfolioDetail.tsx
 import { notFound } from "next/navigation";
 import { PortfolioDetail } from "./PortfolioDetail";
@@ -7,16 +7,13 @@ import { PortfolioDetailData } from "@/types/PortfolioDetail"; // 型をイン�
 
 // Next.jsのdynamic segmentsからportfolio_idを受け取る
 interface PagePortfolioDetailProps {
-  params: {
-    portfolio_id: string;
-  };
+  params: { portfolio_id: string };
 }
 
 export default async function PagePortfolioDetail({
   params,
 }: PagePortfolioDetailProps) {
   const { portfolio_id } = params;
-
   // Server Actionを呼び出してポートフォリオ詳細データを取得
   const result = await readPortfolioDetailAction(portfolio_id);
 

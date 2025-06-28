@@ -17,7 +17,7 @@ import {
   ExitConditionType,
   SimpleExitCondition,
   TransactionDirection,
-} from "./PlanMake";
+} from "@/types/simulation";
 
 interface ExitConditionModalProps {
   isOpen: boolean;

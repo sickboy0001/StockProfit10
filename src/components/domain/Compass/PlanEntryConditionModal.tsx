@@ -410,18 +410,11 @@ export const PlanEntryConditionModal: React.FC<EntryConditionModalProps> = ({
           {modalEntryConditionType === "priceMovement" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                {/* <Label
+                <Label
                   htmlFor="modal-entry-var-a-days"
                   className="text-gray-700"
                 >
                   前提条件の日数 (A)
-                </Label> */}
-                <Label
-                  htmlFor="modal-entry-var-b-percent"
-                  className="text-gray-700"
-                >
-                  前提条件の{transactionType === "long" ? "上昇" : "下落"}率 (B)
-                  (%)
                 </Label>
                 <Input
                   id="modal-entry-var-a-days"
@@ -439,9 +432,8 @@ export const PlanEntryConditionModal: React.FC<EntryConditionModalProps> = ({
                   htmlFor="modal-entry-var-b-percent"
                   className="text-gray-700"
                 >
-                  前提条件の
-                  {modalEntryConditionType === "priceChange" ? "上昇" : "下落"}
-                  率 (B) (%)
+                  前提条件の{transactionType === "long" ? "上昇" : "下落"}率 (B)
+                  (%)
                 </Label>
                 <Input
                   id="modal-entry-var-b-percent"

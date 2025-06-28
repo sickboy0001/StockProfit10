@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { PortfolioStockDetail } from "./types"; // 定義した型をインポート
 import {
   Dialog,
   DialogContent,
@@ -15,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { PortfolioStockDetail } from "@/types/PortfolioDetail";
 
 interface ModalPortfolioStockEditProps {
   isOpen: boolean;

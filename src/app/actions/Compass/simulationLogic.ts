@@ -140,7 +140,7 @@ export function simulateTrades(
               fee: buyFee,
               cumulativeProfitLoss: cumulativeProfitLoss, // 買い時点での累積損益は変化なし
               memo: `買いシグナル発生: ${hypothesisParams.variableADays}日で${hypothesisParams.variableBPercent}%上昇`,
-              createdAt: new Date().toISOString(),
+              // createdAt: new Date().toISOString(),
             };
             trades.push(buyTrade);
           }
@@ -186,7 +186,7 @@ export function simulateTrades(
             profitLoss: netProfit,
             cumulativeProfitLoss: cumulativeProfitLoss,
             memo: `利確 (${hypothesisParams.variableDPercent}%目標達成)`,
-            createdAt: new Date().toISOString(),
+            // createdAt: new Date().toISOString(),
           };
           trades.push(sellTrade);
           currentHolding = null; // 売却したので保有をクリア
@@ -215,7 +215,7 @@ export function simulateTrades(
             profitLoss: netProfit,
             cumulativeProfitLoss: cumulativeProfitLoss,
             memo: `損切り (${hypothesisParams.variableDPercent}%損切り)`,
-            createdAt: new Date().toISOString(),
+            // createdAt: new Date().toISOString(),
           };
           trades.push(sellTrade);
           currentHolding = null; // 売却したので保有をクリア
@@ -250,7 +250,7 @@ export function simulateTrades(
           profitLoss: netProfit,
           cumulativeProfitLoss: cumulativeProfitLoss,
           memo: `シミュレーション期間終了による強制売却`,
-          createdAt: new Date().toISOString(),
+          // createdAt: new Date().toISOString(),
         };
         trades.push(sellTrade);
         currentHolding = null;
@@ -283,7 +283,7 @@ export function simulateTrades(
       profitLoss: netProfit,
       cumulativeProfitLoss: cumulativeProfitLoss,
       memo: "シミュレーション期間終了による強制売却",
-      createdAt: new Date().toISOString(),
+      // createdAt: new Date().toISOString(),
     };
     trades.push(sellTrade);
   }

@@ -67,9 +67,11 @@ export async function readPortfoliosAction(userId: string): Promise<{
 
     return { data: portfolios, error: null };
   } catch (err: unknown) {
+    let message = `Failed to read portfolios for user ${userId}`;
+    if (err instanceof Error) message = err.message;
     return {
       data: null,
-      error: err.message || `Failed to read portfolios for user ${userId}`,
+      error: message,
     };
   }
 }
@@ -134,7 +136,9 @@ export async function createPortfolioAction(params: {
     );
     return { data: portfolioResult, error: null };
   } catch (err: unknown) {
-    return { data: null, error: err.message || "Failed to create portfolio" };
+    let message = "Failed to create portfolio";
+    if (err instanceof Error) message = err.message;
+    return { data: null, error: message };
   }
 }
 
@@ -216,9 +220,11 @@ export async function updatePortfolioAction(params: {
     );
     return { data: portfolioResult, error: null };
   } catch (err: unknown) {
+    let message = `Failed to update portfolio ${portfolioId}`;
+    if (err instanceof Error) message = err.message;
     return {
       data: null,
-      error: err.message || `Failed to update portfolio ${portfolioId}`,
+      error: message,
     };
   }
 }
@@ -258,9 +264,11 @@ export async function deletePortfolioAction(
     );
     return { success: true, error: null };
   } catch (err: unknown) {
+    let message = `Failed to delete portfolio ${portfolioId}`;
+    if (err instanceof Error) message = err.message;
     return {
       success: false,
-      error: err.message || `Failed to delete portfolio ${portfolioId}`,
+      error: message,
     };
   }
 }
@@ -311,9 +319,11 @@ export async function updatePortfolioOrderAction(
         updatedCount++;
       }
     } catch (err: unknown) {
-      errors.push(
-        `Unexpected error updating order for portfolio ${portfolio.id}: ${err.message}`
-      );
+      let message = `Unexpected error updating order for portfolio ${portfolio.id}`;
+      if (err instanceof Error) {
+        message = `${message}: ${err.message}`;
+      }
+      errors.push(message);
     }
   }
 

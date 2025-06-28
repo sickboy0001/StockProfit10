@@ -321,13 +321,20 @@ export async function updatePortfolioStock(
       return { error: `銘柄情報の更新に失敗しました: ${error.message}` };
     }
 
+    // Supabaseの型推論ではリレーション先(spt_stocks)が配列型と見なされるため、
+    // 実際のデータ構造（オブジェクト）に合わせるために型アサーションを行います。
+    const stockInfo = data.spt_stocks as unknown as {
+      name: string;
+      market: string | null;
+    };
+
     // 最新の日次株価データは別途取得するか、クライアント側で対応
     // ここでは簡易的に、更新された基本情報とダミーの最新株価情報で返す
     return {
       id: data.id,
       stockCode: data.stock_code,
-      name: (data.spt_stocks as { name: string }).name,
-      market: (data.spt_stocks as { market: string }).market,
+      name: stockInfo.name,
+      market: stockInfo.market,
       groupName: data.group_name,
       memo: data.memo,
       displayOrder: data.display_order,

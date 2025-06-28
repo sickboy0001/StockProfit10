@@ -154,6 +154,7 @@ export async function convertAndImportStocks(): Promise<{
     const BATCH_SIZE = 500; // Supabaseはデフォルトで1000件のバッチサイズを推奨しますが、安全のため500に設定
     let successCount = 0;
     const errorMessages: string[] = [];
+    const supabase = await createClient();
 
     for (let i = 0; i < sptStocksData.length; i += BATCH_SIZE) {
       const batch = sptStocksData.slice(i, i + BATCH_SIZE);

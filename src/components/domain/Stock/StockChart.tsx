@@ -7,6 +7,7 @@ import { format } from "date-fns"; // 日付フォーマット用
 import StockChartForm from "./StockChartSeletCode"; // ★ 新しいフォームコンポーネントをインポート
 import StockDatabaseInfo from "./StockDatabaseInfo";
 import StockChartView from "./StockChartView";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StockChartProps {
   initialStockCode?: string;
@@ -19,7 +20,7 @@ const StockChart: React.FC<StockChartProps> = ({
   initialStartDate = format(
     new Date(new Date().setFullYear(new Date().getFullYear() - 3)),
     "yyyy-MM-dd"
-  ), // 1年前
+  ), // 3年前
   initialEndDate = format(new Date(), "yyyy-MM-dd"), // 今日
 }) => {
   const [stockCode, setStockCode] = useState(initialStockCode);
@@ -30,7 +31,7 @@ const StockChart: React.FC<StockChartProps> = ({
   const [currentEndDate, setCurrentEndDate] = useState(initialEndDate);
 
   // // const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
-
+  const { user } = useAuth();
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("handleSubmit called", stockCode);
@@ -47,6 +48,7 @@ const StockChart: React.FC<StockChartProps> = ({
     <div className="p-4 bg-white shadow-lg rounded-lg">
       <h2 className="text-2xl font-bold mb-4">株価チャート</h2>
       <StockChartForm
+        userId={user?.id}
         stockCode={stockCode}
         startDate={startDate}
         endDate={endDate}
@@ -56,7 +58,7 @@ const StockChart: React.FC<StockChartProps> = ({
         onSubmit={handleSubmit}
         isLoading={isLoading}
       />
-      <StockDatabaseInfo stockCode={currentStockCode} />
+      <StockDatabaseInfo stockCode={currentStockCode} userId={user?.id} />
 
       <StockChartView
         stockCode={currentStockCode}

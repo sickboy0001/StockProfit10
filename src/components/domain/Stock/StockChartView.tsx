@@ -360,7 +360,7 @@ const StockChartView: React.FC<StockChartProps> = ({
 
     const volumeData = chartData.map((d) => ({
       time: (new Date(d.date).getTime() / 1000) as Time,
-      value: d.volume,
+      value: typeof d.volume === "number" ? d.volume : 0, // Ensure value is a number, default to 0 if not
       color:
         d.open !== undefined &&
         d.close !== undefined &&

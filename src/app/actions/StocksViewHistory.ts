@@ -1,7 +1,6 @@
 // app/action/stock-history.ts
 "use server"; // これをファイルの先頭に記述することで、Server Actionとして機能します
-
-import { createClient } from "@supabase/supabase-js"; // Supabaseクライアントのインポート
+import { createClient } from "@/util/supabase/server";
 import { getDailyQuotesPeriodsAction } from "./DailyQuotes";
 
 // Supabaseクライアントの初期化
@@ -9,9 +8,6 @@ import { getDailyQuotesPeriodsAction } from "./DailyQuotes";
 // ただし、Next.jsのServer Actionでは、通常NEXT_PUBLIC_プレフィックスなしの環境変数も利用可能ですが、
 // ここではフロントエンドと共有するためにNEXT_PUBLIC_を使用します。
 // 実際のデプロイ時には、Vercelのプロジェクト設定でこれらの環境変数を設定してください。
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // get_period_stock_views 関数が返す行の型定義
 // これはSupabaseのRPC関数の戻り値の型と一致させる必要があります
@@ -42,6 +38,7 @@ interface GetPeriodStockViewsParams {
 export async function getRawPeriodStockViewsAction(
   params: GetPeriodStockViewsParams
 ): Promise<PeriodStockView[] | { error: string }> {
+  const supabase = await createClient();
   try {
     // SupabaseのRPC (Remote Procedure Call) メソッドを使って
     // PostgreSQL関数 'get_period_stock_views' を呼び出します。

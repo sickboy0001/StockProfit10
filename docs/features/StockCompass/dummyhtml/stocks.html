@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>フィルタリング結果確認</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background-color: #f9f9f9;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #eee;
+        }
+
+        .ok {
+            color: green;
+            font-weight: bold;
+        }
+
+        .ng {
+            color: red;
+            font-weight: bold;
+        }
+
+        .reason {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .button {
+            padding: 4px 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007acc;
+            color: white;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #005f99;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>フィルタリング結果確認</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>銘柄コード</th>
+                <th>銘柄名</th>
+                <th>判定</th>
+                <th>フィルタ理由</th>
+                <th>自動判定</th>
+                <th>手動判定</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>7203</td>
+                <td>トヨタ</td>
+                <td class="ok">✅</td>
+                <td>—</td>
+                <td class="ok">✅</td>
+                <td class="ok">✅</td>
+                <td><button class="button">編集</button></td>
+            </tr>
+            <tr>
+                <td>6758</td>
+                <td>ソニー</td>
+                <td class="ng">❌</td>
+                <td class="reason">出来高不足</td>
+                <td class="ng">❌</td>
+                <td class="ok">✅</td>
+                <td><button class="button">編集</button></td>
+            </tr>
+            <tr>
+                <td>9984</td>
+                <td>ソフトバンク</td>
+                <td class="ng">❌</td>
+                <td class="reason">資本金不足</td>
+                <td class="ng">❌</td>
+                <td class="ng">❌</td>
+                <td><button class="button">編集</button></td>
+            </tr>
+            <tr>
+                <td>8058</td>
+                <td>三菱商事</td>
+                <td class="ok">✅</td>
+                <td>—</td>
+                <td class="ok">✅</td>
+                <td class="ok">✅</td>
+                <td><button class="button">編集</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>

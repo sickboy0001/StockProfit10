@@ -1,11 +1,7 @@
-"use server"; // Server Actionであることを示す
+"use server";
+import { createClient } from "@/util/supabase/server";
 
-import { createClient } from "@supabase/supabase-js";
-
-// Supabaseクライアントの初期化
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Server Actionであることを示す
 
 // 銘柄の日付期間の型定義
 interface DailyQuotePeriod {
@@ -24,6 +20,7 @@ export async function getDailyQuotesPeriodsAction(): Promise<
   DailyQuotePeriod[] | { error: string }
 > {
   try {
+    const supabase = await createClient();
     // ユーザーが提供したクエリをSupabaseクライアントで実行
     // .select()に集計関数を含めると、自動的にGROUP BYが適用されます
     const { data, error } = await supabase.rpc("get_all_daily_quotes_periods");

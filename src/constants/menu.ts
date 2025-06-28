@@ -36,7 +36,18 @@ export const headerNavItems: NavItem[] = [
     label: "ChatTest",
     href: "/stock/ChartTest",
   },
-
+  {
+    id: "Portfolio",
+    type: "link",
+    label: "Portfolio",
+    href: "/Portfolio/List",
+  },
+  {
+    id: "CompassSetting",
+    type: "link",
+    label: "CompassSetting",
+    href: "/Compass/Condition/Setting",
+  },
   {
     id: "menu",
     type: "dropdown",

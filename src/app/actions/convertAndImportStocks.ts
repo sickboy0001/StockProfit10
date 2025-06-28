@@ -1,25 +1,13 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
-
 // Supabaseクライアントの初期化
 // 環境変数からSUPABASE_URLとSUPABASE_SERVICE_ROLE_KEYを取得します
 // .env.local ファイルに以下のように設定してください:
-// NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
-// SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY (←重要: ここではサービスロールキーを使う)
 //
 // サービスロールキーはSupabaseの「Project Settings」->「API Keys」で取得できます。
 // これを使うことで、RLSポリシーに左右されずに（バイパスして）DB操作が可能です。
 // ただし、このキーは絶対にクライアントサイドに公開しないでください。
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // **重要**: サービスロールキーを使用
-  {
-    auth: {
-      persistSession: false, // サーバーサイドではセッションを保持しない
-    },
-  }
-);
+import { createClient } from "@/util/supabase/server";
 
 // jpx_company_master のレコード型
 interface JpxCompanyMasterRecord {
@@ -47,9 +35,10 @@ interface SptStockRecord {
   updated_at: string;
 }
 
-async function fetchAllJpxCompanyMasterData(
-  supabaseClient: typeof supabase
-): Promise<JpxCompanyMasterRecord[]> {
+async function fetchAllJpxCompanyMasterData(): Promise<
+  JpxCompanyMasterRecord[]
+> {
+  const supabase = await createClient();
   const allData: JpxCompanyMasterRecord[] = [];
   let offset = 0;
   const limit = 1000; // 一度に取得する件数。Supabaseのデフォルト上限に合わせる
@@ -60,7 +49,7 @@ async function fetchAllJpxCompanyMasterData(
   );
 
   while (allData.length < totalCount) {
-    const { data, error, count } = await supabaseClient
+    const { data, error, count } = await supabase
       .from("jpx_company_master")
       .select("*", { count: "exact" }) // count: 'exact' で総件数を取得
       .range(offset, offset + limit - 1);
@@ -121,7 +110,7 @@ export async function convertAndImportStocks(): Promise<{
     let jpxData: JpxCompanyMasterRecord[];
     try {
       // Supabaseクライアントを渡してヘルパー関数を呼び出す
-      jpxData = await fetchAllJpxCompanyMasterData(supabase);
+      jpxData = await fetchAllJpxCompanyMasterData();
     } catch (fetchError: unknown) {
       console.error(
         "[convertAndImportStocks] Error fetching from jpx_company_master:",

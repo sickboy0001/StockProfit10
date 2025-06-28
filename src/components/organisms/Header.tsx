@@ -155,9 +155,8 @@ export function Header() {
         <div className="container mx-auto flex flex-wrap p-1 flex-col md:flex-row items-center">
           <Link href="/" className="font-bold text-base sm:text-2xl">
             <div>
-              {/* imgタグをnext/imageのImageコンポーネントに置き換え */}
               <Image
-                src="/image/title-small.png"
+                src="/images/title-small.png"
                 alt="LogImage" // より具体的なaltテキストを推奨
                 width={150} // 数値で指定
                 height={40} // 数値で指定

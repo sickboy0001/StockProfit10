@@ -2,16 +2,13 @@
 "use server"; // Server Actionであることを示す
 
 import { User as AppUser } from "@/types/user"; // User型をAppUserとしてインポート
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/util/supabase/server";
 
 // Supabaseクライアントの初期化
 // Server Actionはサーバーサイドで実行されるため、安全に環境変数を利用できます。
 // ただし、Next.jsのServer Actionでは、通常NEXT_PUBLIC_プレフィックスなしの環境変数も利用可能ですが、
 // ここではフロントエンドと共有するためにNEXT_PUBLIC_を使用します。
 // 実際のデプロイ時には、Vercelのプロジェクト設定でこれらの環境変数を設定してください。
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // ユーザー情報と役割の型定義
 export interface UserWithRoles {
@@ -56,6 +53,7 @@ export async function fetchUsersAction(params: GetUsersParams): Promise<{
   error: string | null;
 }> {
   try {
+    const supabase = await createClient();
     const { data, error } = await supabase.rpc(
       "get_users_with_roles_and_status",
       {
@@ -111,6 +109,8 @@ export async function fetchAllRolesAction(): Promise<{
   error: string | null;
 }> {
   try {
+    const supabase = await createClient();
+
     // roles テーブルから全ての列を選択 (SELECT * FROM roles と同等)
     const { data, error } = await supabase.from("roles").select("*");
 
@@ -196,6 +196,8 @@ export async function updateUserRolesAction(
   try {
     // 1. 既存のユーザー役割を削除
     // user_roles テーブルから指定された user_id に紐づくレコードを全て削除します。
+    const supabase = await createClient();
+
     const { error: deleteError } = await supabase
       .from("user_roles")
       .delete()
@@ -260,6 +262,8 @@ export async function updateUserRolesAction(
 
 /// 遅いようなら、専用のDB関数を作る
 export async function getUserByEmail(email: string) {
+  const supabase = await createClient();
+
   const { data, error } = await supabase.rpc(
     "get_users_with_roles_and_status",
     {

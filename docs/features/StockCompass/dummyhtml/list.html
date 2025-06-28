@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>プラン管理画面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+            margin: 30px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card-header {
+            font-weight: bold;
+            background-color: #eee;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+            border-radius: 6px 6px 0 0;
+            margin: -20px -20px 20px -20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+
+        th, td {
+            border: 1px solid #999;
+            padding: 8px 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #ddd;
+        }
+
+        .actions button {
+            padding: 5px 10px;
+            margin: 2px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+            background-color: #007acc;
+        }
+
+        .actions button:hover {
+            background-color: #005f99;
+        }
+
+        .inactive {
+            background-color: #999;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>プラン管理画面</h1>
+
+    <div class="card">
+        <div class="card-header">プラン一覧</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>参照</th>
+                    <th>作成日時</th>
+                    <th>作成者</th>
+                    <th>名前</th>
+                    <th>メモ</th>
+                    <th>銘柄</th>
+                    <th>スクリーニング</th>
+                    <th>期間</th>
+                    <th>S/L</th>
+                    <th>Entry</th>
+                    <th>Exit</th>
+                    <th>利益率</th>
+                    <th>状態</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="actions">
+                        <button>結果参照</button>
+                        <button>編集</button>
+                        <button>引用新規</button>
+                    </td>
+                    <td>2025/01/07 11:12</td>
+                    <td>sickboy</td>
+                    <td>検証用</td>
+                    <td>—</td>
+                    <td>(9) 1234, 1111, 2123...</td>
+                    <td>出来高:100以上、資本金</td>
+                    <td>2024/01/01 - 2025/01/01</td>
+                    <td>ロング</td>
+                    <td>Entry↓</td>
+                    <td>Exit↓</td>
+                    <td>+2%</td>
+                    <td><span class="inactive">無効</span></td>
+                </tr>
+                <tr>
+                    <td class="actions">
+                        <button>結果参照</button>
+                        <button>編集</button>
+                        <button>引用新規</button>
+                    </td>
+                    <td>2025/01/11 23:12</td>
+                    <td>sickboy</td>
+                    <td>検証用</td>
+                    <td>—</td>
+                    <td>(21) 1234, 2222, 2123...</td>
+                    <td>出来高:100以上、資本金</td>
+                    <td>2024/01/01 - 2025/01/01</td>
+                    <td>ロング</td>
+                    <td>Entry↓</td>
+                    <td>Exit↓</td>
+                    <td>+11%</td>
+                    <td><span class="inactive">無効</span></td>
+                </tr>
+                <tr>
+                    <td class="actions">
+                        <button>プラン実行</button>
+                        <button>編集</button>
+                        <button>引用新規</button>
+                    </td>
+                    <td>2025/01/14 20:12</td>
+                    <td>sickboy</td>
+                    <td>検証用</td>
+                    <td>—</td>
+                    <td>(10) 5555, 4444, 2123...</td>
+                    <td>出来高:100以上、資本金</td>
+                    <td>2024/01/01 - 2025/01/01</td>
+                    <td>ロング</td>
+                    <td>Entry↓</td>
+                    <td>Exit↓</td>
+                    <td>—</td>
+                    <td><span class="inactive">無効</span></td>
+                </tr>
+                <tr>
+                    <td class="actions">
+                        <button>プラン実行</button>
+                        <button>編集</button>
+                        <button>引用新規</button>
+                    </td>
+                    <td>2025/01/16 08:12</td>
+                    <td>sickboy</td>
+                    <td>検証用</td>
+                    <td>—</td>
+                    <td>(2) 1234, 2123...</td>
+                    <td>出来高:100以上、資本金</td>
+                    <td>2024/01/01 - 2025/01/01</td>
+                    <td>ロング</td>
+                    <td>Entry↓</td>
+                    <td>Exit↓</td>
+                    <td>—</td>
+                    <td><span class="inactive">無効</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>

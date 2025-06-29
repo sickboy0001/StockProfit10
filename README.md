@@ -34,8 +34,8 @@ test-3
 
 ## 4.デモ or スクリーンショット
 
-Vercel:[Vercel](https://stock-profit10.vercel.app/)
-Github:[GitHub](https://github.com/sickboy0001/StockProfit10)
+* Vercel:[Vercel](https://stock-profit10.vercel.app/)
+* Github:[GitHub](https://github.com/sickboy0001/StockProfit10)
 
 ## 5.環境
 ### ■開発環境

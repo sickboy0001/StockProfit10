@@ -61,15 +61,22 @@ RETURNS TABLE (
     deleted_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE,
+    stock_selection_id BIGINT,
     stock_selection_name TEXT,
+    simulation_period_id BIGINT,
     simulation_period_name TEXT,
     simulation_start_date DATE,
     simulation_end_date DATE,
+    trade_parameter_id BIGINT,
     trade_parameter_name TEXT,
+    signal_id BIGINT,
     signal_name TEXT,
     transaction_type VARCHAR(10),
+    entry_signal_id BIGINT,
     entry_signal_name TEXT,
+    exit_signal_id BIGINT,
     exit_signal_name TEXT,
+    fee_tax_id BIGINT,
     fee_tax_name TEXT
 )
 LANGUAGE plpgsql
@@ -87,15 +94,22 @@ BEGIN
         sac.deleted_at,
         sac.created_at,
         sac.updated_at,
+        sssh.id AS stock_selection_id,
         sssh.name AS stock_selection_name,
+        ssp.id AS simulation_period_id ,
         ssp.name AS simulation_period_name,
         ssp.start_date AS simulation_start_date,
         ssp.end_date AS simulation_end_date,
+        stp.id AS trade_parameter_id,
         stp.name AS trade_parameter_name,
+        ss.id as signal_id ,
         ss.name AS signal_name,
         ss.transaction_type,
+        ses.id as entry_signal_id ,
         ses.name AS entry_signal_name,
+        sexs.id as exit_signal_id,
         sexs.name AS exit_signal_name,
+        sft.id as fee_tax_id ,
         sft.name AS fee_tax_name
     FROM
         sptch_analysis_conditions sac
@@ -123,6 +137,10 @@ $$;
 
 -- Grant execution to authenticated users
 GRANT EXECUTE ON FUNCTION public.get_analysis_conditions_for_display(UUID) TO authenticated;
+
+
+-- select * from get_analysis_conditions_for_display('76b8d0ed-825d-43a6-a725-37e10c11015b')
+
 
 
 ```

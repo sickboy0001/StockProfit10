@@ -1,7 +1,14 @@
 // app/dashboard/plan-maintenance/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { Button } from "@/components/ui/button";
 // import { Checkbox } from "@/components/ui/checkbox";
@@ -31,6 +38,9 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import Link from "next/link"; // Next.jsのLinkコンポーネントをインポート
+import { ModalSignalDetail } from "./ModalSignalDetail";
+import { ModalPlanNameMemo } from "./ModalPlanNameMemo";
+import { EditButton } from "@/components/ui/EditButton";
 
 // // プランデータの型定義 (PostgreSQL関数の戻り値に合わせる)
 // interface DisplayPlan {
@@ -62,6 +72,15 @@ export default function PlanMaintenance() {
   const [planToSimulate, setPlanToSimulate] = useState<DisplayPlan | null>(
     null
   );
+  const [signalDetailPlan, setSignalDetailPlan] = useState<DisplayPlan | null>(
+    null
+  );
+  const [planToEditDetails, setPlanToEditDetails] =
+    useState<DisplayPlan | null>(null);
+
+  // const [editingSignalName, setEditingSignalName] = useState("");
+  // const [isSaving, setIsSaving] = useState(false);
+
   const [plans, setPlans] = useState<DisplayPlan[]>([]);
   const [simulationMessage, setSimulationMessage] = useState("");
   const [isSimulationMessageOpen, setIsSimulationMessageOpen] = useState(false);
@@ -69,6 +88,12 @@ export default function PlanMaintenance() {
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
+
+  // useEffect(() => {
+  //   if (signalDetailPlan) {
+  //     setEditingSignalName(signalDetailPlan.signal_name || "");
+  //   }
+  // }, [signalDetailPlan]);
 
   // プランデータをフェッチする関数 (PostgreSQL関数を呼び出す)
   useEffect(() => {
@@ -117,6 +142,31 @@ export default function PlanMaintenance() {
       setPlanToSimulate(null);
     }
   };
+
+  // シグナル名更新成功時のコールバック
+  const handleSignalSaveSuccess = useCallback((updatedPlan: DisplayPlan) => {
+    setPlans((prevPlans) =>
+      prevPlans.map((p) => (p.id === updatedPlan.id ? updatedPlan : p))
+    );
+    setSignalDetailPlan(null); // モーダルを閉じる
+  }, []);
+
+  const handlePlanDetailsSaveSuccess = useCallback(
+    (updatedDetails: Pick<DisplayPlan, "id" | "plan_name" | "plan_memo">) => {
+      setPlans((prevPlans) =>
+        prevPlans.map((p) =>
+          p.id === updatedDetails.id ? { ...p, ...updatedDetails } : p
+        )
+      );
+      setPlanToEditDetails(null); // モーダルを閉じる
+    },
+    []
+  );
+
+  const handleShowMessage = useCallback((message: string) => {
+    setSimulationMessage(message);
+    setIsSimulationMessageOpen(true);
+  }, []);
 
   if (isLoading)
     return (
@@ -170,14 +220,14 @@ export default function PlanMaintenance() {
           <TableHeader className="bg-blue-100">
             <TableRow className="text-gray-700">
               <TableHead className="py-3 px-6 text-left text-sm font-semibold uppercase tracking-wider">
-                参照
+                操作
               </TableHead>
               <TableHead className="py-3 px-6 text-left text-sm font-semibold uppercase tracking-wider">
                 作成日時
               </TableHead>
-              <TableHead className="py-3 px-6 text-left text-sm font-semibold uppercase tracking-wider">
+              {/* <TableHead className="py-3 px-6 text-left text-sm font-semibold uppercase tracking-wider">
                 作成者
-              </TableHead>
+              </TableHead> */}
               <TableHead className="py-3 px-6 text-left text-sm font-semibold uppercase tracking-wider">
                 名前
               </TableHead>
@@ -208,83 +258,132 @@ export default function PlanMaintenance() {
             </TableRow>
           </TableHeader>
           <TableBody className="bg-white divide-y divide-gray-100">
-            {plans.map((plan) => (
+            {plans.map((ThisDisplayPlan) => (
               <TableRow
-                key={plan.id}
+                key={ThisDisplayPlan.id}
                 className="hover:bg-gray-50 transition-colors duration-200"
               >
-                <TableCell className="py-4 px-6 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {/* Next.js Linkの代わりにaタグを使用 */}
-                  <a
-                    href={`/dashboard/results/${plan.id}`}
-                    className="text-blue-600 hover:text-blue-800 hover:underline mr-2"
-                  >
-                    結果参照
-                  </a>
-                  <a
-                    href={`/dashboard/plans/edit/${plan.id}`}
-                    className="text-blue-600 hover:text-blue-800 hover:underline mr-2"
-                  >
-                    編集
-                  </a>
-                  <a
-                    href={`/dashboard/plans/new?from=${plan.id}`}
-                    className="text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    引用新規
-                  </a>
+                <TableCell className="py-4 px-6 whitespace-nowrap text-sm font-medium">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">メニューを開く</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/dashboard/results/${ThisDisplayPlan.id}`}>
+                          結果参照
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={`/Compass/generatePlanResult/${ThisDisplayPlan.id}`}
+                        >
+                          シミュレーション実行
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={`/dashboard/plans/edit/${ThisDisplayPlan.id}`}
+                        >
+                          編集
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={`/dashboard/plans/new?from=${ThisDisplayPlan.id}`}
+                        >
+                          引用新規
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setPlanToEditDetails(ThisDisplayPlan)}
+                      >
+                        名前/メモ編集
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
                 <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700">
-                  {new Date(plan.created_at).toLocaleDateString("ja-JP")}
+                  {new Date(ThisDisplayPlan.created_at).toLocaleDateString(
+                    "ja-JP"
+                  )}
+                </TableCell>
+                {/* <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700">
+                  {ThisDisplayPlan.user_name || "不明"}
+                </TableCell> */}
+                <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700">
+                  {(() => {
+                    const plan_name = ThisDisplayPlan.plan_name.trim();
+                    return (
+                      <div>
+                        <span className="truncate">{plan_name}</span>
+                        <EditButton
+                          onClick={() => setPlanToEditDetails(ThisDisplayPlan)}
+                        />
+                      </div>
+                    );
+                  })()}
+                </TableCell>
+                <TableCell className="py-4 px-6 text-sm text-gray-700 max-w-xs">
+                  {(() => {
+                    const plan_memo = ThisDisplayPlan.plan_memo || "-";
+                    return (
+                      <div>
+                        <span className="truncate">{plan_memo}</span>
+                        <EditButton
+                          onClick={() => setPlanToEditDetails(ThisDisplayPlan)}
+                        />
+                      </div>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700">
-                  {plan.user_name || "不明"}
+                  {ThisDisplayPlan.stock_selection_name || "-"}
                 </TableCell>
                 <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700">
-                  {plan.plan_name}
-                </TableCell>
-                <TableCell className="py-4 px-6 text-sm text-gray-700 max-w-xs truncate">
-                  {plan.plan_memo || "-"}
+                  {ThisDisplayPlan.simulation_period_name || "-"}
                 </TableCell>
                 <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700">
-                  {plan.stock_selection_name || "-"}
+                  {ThisDisplayPlan.trade_parameter_name || "-"}
+                </TableCell>
+                <TableCell className="py-4 px-6 text-sm text-gray-700 max-w-[250px]">
+                  <div>
+                    {(() => {
+                      const fullSignalText =
+                        [
+                          ThisDisplayPlan.signal_name,
+                          ThisDisplayPlan.transaction_type &&
+                            `(${ThisDisplayPlan.transaction_type})`,
+                          ThisDisplayPlan.entry_signal_name &&
+                            `(Entry: ${ThisDisplayPlan.entry_signal_name})`,
+                          ThisDisplayPlan.exit_signal_name &&
+                            `(Exit: ${ThisDisplayPlan.exit_signal_name})`,
+                        ]
+                          .filter(Boolean)
+                          .join(" ") || "-";
+                      return (
+                        <>
+                          <span className="truncate" title={fullSignalText}>
+                            {fullSignalText}
+                          </span>
+                          <EditButton
+                            onClick={() => setSignalDetailPlan(ThisDisplayPlan)}
+                          />
+                        </>
+                      );
+                    })()}
+                  </div>
                 </TableCell>
                 <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700">
-                  {plan.simulation_period_name || "-"}
-                  {plan.simulation_start_date &&
-                    plan.simulation_end_date &&
-                    ` (${new Date(
-                      plan.simulation_start_date
-                    ).toLocaleDateString("ja-JP")} - ${new Date(
-                      plan.simulation_end_date
-                    ).toLocaleDateString("ja-JP")})`}
+                  {ThisDisplayPlan.profit_rate || "-"}
                 </TableCell>
-                <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700">
-                  {plan.trade_parameter_name || "-"}
-                </TableCell>
-                <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700">
-                  {plan.signal_name || "-"}
-                  {plan.transaction_type && ` (${plan.transaction_type})`}
-                  {plan.entry_signal_name &&
-                    ` (Entry: ${plan.entry_signal_name})`}
-                  {plan.exit_signal_name && ` (Exit: ${plan.exit_signal_name})`}
-                </TableCell>
-                <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700">
-                  {plan.profit_rate || "-"}
-                </TableCell>
-                <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700">
-                  {/* <Checkbox
-                    checked={plan.is_active}
-                    onCheckedChange={() =>
-                      handleToggleActive(plan.id, plan.is_active)
-                    }
-                    aria-label="プランの有効/無効を切り替える"
-                    className="w-5 h-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500"
-                  /> */}
-                </TableCell>
+                <TableCell className="py-4 px-6 whitespace-nowrap text-sm text-gray-700"></TableCell>
                 <TableCell className="py-4 px-6 whitespace-nowrap text-sm font-medium">
                   <Button
-                    onClick={() => handleRunSimulationClick(plan)}
+                    onClick={() => handleRunSimulationClick(ThisDisplayPlan)}
                     className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-200 ease-in-out transform hover:scale-105"
                     size="sm"
                     // disabled={runSimulationMutation.isPending}
@@ -328,6 +427,25 @@ export default function PlanMaintenance() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* シグナル詳細モーダル */}
+      {/* シグナル詳細モーダルを新しいコンポーネントとして呼び出す */}
+      <ModalSignalDetail
+        isOpen={!!signalDetailPlan}
+        onClose={() => setSignalDetailPlan(null)}
+        plan={signalDetailPlan}
+        onSaveSuccess={handleSignalSaveSuccess}
+        onShowMessage={handleShowMessage}
+      />
+
+      {/* プラン名/メモ編集モーダル */}
+      <ModalPlanNameMemo
+        isOpen={!!planToEditDetails}
+        onClose={() => setPlanToEditDetails(null)}
+        plan={planToEditDetails}
+        onSaveSuccess={handlePlanDetailsSaveSuccess}
+        onShowMessage={handleShowMessage}
+      />
 
       {/* シミュレーション結果/エラーメッセージダイアログ */}
       <AlertDialog

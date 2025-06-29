@@ -170,10 +170,6 @@ export function PortfolioList(/*{ initialPortfolios }: PortfolioListProps*/) {
           }`,
           type: "error",
         });
-        // エラー発生時は、サーバー側の状態とUIを同期させるため再フェッチするか、
-        // またはUIを並び替え前の状態に戻すことを検討
-        // fetchPortfolios(); // 再フェッチする場合
-        // setPortfolios(portfolios); // 元の順序に戻す場合 (元のportfoliosを保持しておく必要がある)
       }
     } catch (error) {
       showCustomToast({

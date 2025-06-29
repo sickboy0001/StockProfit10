@@ -43,10 +43,10 @@ export const headerNavItems: NavItem[] = [
     href: "/Portfolio/List",
   },
   {
-    id: "CompassSetting",
+    id: "CompassList",
     type: "link",
-    label: "CompassSetting",
-    href: "/Compass/Condition/Setting",
+    label: "CompassList",
+    href: "/Compass/Condition/List",
   },
   {
     id: "menu",

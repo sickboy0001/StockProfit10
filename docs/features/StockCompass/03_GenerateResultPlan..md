@@ -248,6 +248,42 @@ $$;
 | updated_at | TIMESTAMP | 更新日時 |
 
 ---
+## sptch_simulation_results
+
+| カラム名 | 型 | 制約 | 説明 |
+| --- | --- | --- | --- |
+| id | BIGSERIAL | PRIMARY KEY | シミュレーション結果ID (自動採番される主キー) |
+| plan_id | BIGINT | NOT NULL, FK | 分析プランID (sptch_analysis_conditionsテーブルのIDを参照) |
+| user_id | UUID | NOT NULL, FK | ユーザーID (auth.usersテーブルのIDを参照) |
+| status | TEXT | NOT NULL, DEFAULT 'pending' | 処理ステータス (pending (保留中), running (実行中), completed (完了), failed (失敗)) |
+| summary_json | JSONB | NULL | 結果の概要 (利益率、勝率など、表示用の主要な値がJSON形式で保存されます) |
+| result_json | JSONB | NULL | 詳細なシミュレーション結果 (全取引履歴など、詳細なデータがJSON形式で保存されます) |
+| error_message | TEXT | NULL | 処理が失敗した場合のエラーメッセージ |
+| started_at | TIMESTAMPTZ | NULL | シミュレーション開始時刻 |
+| completed_at | TIMESTAMPTZ | NULL | シミュレーション完了時刻 |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | レコードが作成された日時 |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | レコードが最後に更新された日時 |
+
+sptch_simulation_results というテーブルは、シミュレーションの実行状況と、その結果を保存するために設計されたテーブルを想定しています。
+
+ユーザーが「シミュレーション実施」ボタンを押すと、initiateSimulationAction がこのテーブルに新しい行を1つ作成します。この時点では、status カラムに「pending (処理待ち)」という値が入ります。
+
+その後、バックグラウンドで動作している別のプログラム（Pythonなど）が、このテーブルを定期的にチェックし、status が「pending」の行を見つけたら、実際の重いシミュレーション計算を開始します。計算が完了したら、結果をこのテーブルの result_json や summary_json といったカラムに書き込み、status を「completed (完了)」に更新する、という流れです。
+
+各カラムの役割
+
+* id: このシミュレーション結果を一意に識別するためのIDです。
+* plan_id: どの分析プランに基づいたシミュレーションかを示すためのIDです。
+* user_id: どのユーザーが実行したシミュレーションかを示すためのIDです。
+    * status: シミュレーションの現在の状態を示します。
+    * pending: 処理待ち
+    * running: 処理中
+    * completed: 正常に完了
+    * failed: エラーで失敗
+* summary_json: 結果の概要（総利益率、勝率、最大ドローダウンなど）を保存します。一覧画面などで素早く表示するために使います。
+* result_json: 全ての取引履歴など、詳細なシミュレーション結果の生データを保存します。
+* error_message: statusがfailedになった場合に、その原因を記録します。
+* started_at, completed_at: 処理の開始時刻と完了時刻を記録します。
 
 # 🏗 ER図イメージ
 
@@ -333,6 +369,39 @@ CREATE TABLE sptch_simulation_results_summary (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+
+CREATE TABLE public.sptch_simulation_results (
+    id BIGSERIAL PRIMARY KEY,
+    plan_id BIGINT NOT NULL,
+    user_id UUID NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', -- pending, running, completed, failed
+    summary_json JSONB NULL,
+    result_json JSONB NULL,
+    error_message TEXT NULL,
+    started_at TIMESTAMPTZ NULL,
+    completed_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_plan FOREIGN KEY (plan_id) REFERENCES public.sptch_analysis_conditions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+
+-- コメント
+COMMENT ON COLUMN public.sptch_simulation_results.id IS 'シミュレーション結果ID';
+COMMENT ON COLUMN public.sptch_simulation_results.plan_id IS '分析プランID (sptch_analysis_conditions.id)';
+COMMENT ON COLUMN public.sptch_simulation_results.user_id IS 'ユーザーID';
+COMMENT ON COLUMN public.sptch_simulation_results.status IS '処理ステータス (pending, running, completed, failed)';
+COMMENT ON COLUMN public.sptch_simulation_results.summary_json IS '結果の概要 (利益率、勝率など表示用の主要な値)';
+COMMENT ON COLUMN public.sptch_simulation_results.result_json IS '詳細なシミュレーション結果 (全取引履歴など)';
+COMMENT ON COLUMN public.sptch_simulation_results.error_message IS '処理が失敗した場合のエラーメッセージ';
+COMMENT ON COLUMN public.sptch_simulation_results.started_at IS 'シミュレーション開始時刻';
+COMMENT ON COLUMN public.sptch_simulation_results.completed_at IS 'シミュレーション完了時刻';
+
+-- バックエンドのワーカーが効率的に処理待ちのジョブを見つけられるように、statusカラムにインデックスを作成します。
+CREATE INDEX idx_sptch_simulation_results_status ON public.sptch_simulation_results(status);
+
+
 
 ```
 

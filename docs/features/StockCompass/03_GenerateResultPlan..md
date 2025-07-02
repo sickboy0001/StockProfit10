@@ -33,6 +33,7 @@
 * **06.02 データ登録、Outに基づいた計算の実行:** エグジットが成立した時点のデータ、最終損益、損益発生日などを記録し、計算を実行します。
 * **06.03 次の銘柄の確認（有→02.01へ なし→終了）:** 全ての銘柄の処理が完了したかを確認し、次の銘柄へ進むか、処理を終了します。
 
+
 ### 2. データ準備
 この役割を実行するために必要なデータです。
 * **基本データ:**
@@ -40,8 +41,327 @@
 * **各企業ごとの現状での情報:**
     * 企業名、純資産、従業員数、発行株式数など（フィルター条件適用時に使用）。
 
+### 3. アクティビティ図
+![alt text](images/StockComapss_AD_image01.drawio.png)
+
+
+# 🏗 ER図イメージ
+
+```
+sptch_analysis_conditions
+├── sptch_simulation_results_stocks   ← フィルタリング銘柄結果
+├── sptch_simulation_results_trade    ← トレードシミュレーション結果
+├── sptch_simulation_results_summary  ← プラン全体の総合損益
+├── sptch_simulation_results          ← シミュレーション実行状況と全体結果
+│   └── sptch_simulation_logs         ← 各処理ステップの実行ログ
+```
+
+-----
+
+### ER図要素の説明
+
+  * **`sptch_analysis_conditions`**: 株の分析プランを定義する主要なテーブルです。
+  * **`sptch_simulation_results_stocks`**: `sptch_analysis_conditions` に基づく銘柄フィルタリングの結果を格納します。どの銘柄が投資対象になったかを記録します。
+  * **`sptch_simulation_results_trade`**: `sptch_analysis_conditions` に基づく個々の銘柄のトレードシミュレーション結果（エントリーからエグジットまで）を格納します。
+  * **`sptch_simulation_results_summary`**: `sptch_analysis_conditions` に基づくプラン全体の総合的な損益結果を格納します。
+  * **`sptch_simulation_results`**: 特定の分析プラン (`sptch_analysis_conditions`) に対するシミュレーション実行全体の状況（ステータス、開始/完了時刻、概要、エラーなど）を管理するテーブルです。
+  * **`sptch_simulation_logs`**: `sptch_simulation_results` の各シミュレーション実行における個別の処理ステップの詳細なログ（開始/完了時刻、処理時間、詳細情報など）を記録します。
+
+
+
+
+## 1 **sptch_simulation_results_stocks**
+
+→ フィルタリング結果（銘柄ごとの判定結果）
+
+| カラム名| データ型| 説明|
+| :---------------------- | :---------- | :-------------------------------------------- |
+| id  | BIGSERIAL   | 主キー   |
+| analysis_condition_id | BIGINT  | 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
+| stock_code | VARCHAR(10) | 銘柄コード |
+| filter_reason  | TEXT| 除外理由（例: 出来高不足・資本金不足・投資額オーバーなど）|
+| score   | INTEGER | 自動判定のスコア（0: 対象外、1: 対象）|
+| manual_score   | INTEGER | 手動での調整スコア（0: 対象外、1: 対象）   |
+| created_at | TIMESTAMP   | 作成日時  |
+| updated_at | TIMESTAMP   | 更新日時  |
+
+## 2 **sptch_simulation_results_trade**
+
+→ 銘柄ごとのトレードシミュレーション結果（Entry→Exit）
+
+| カラム名| データ型  | 説明|
+| :---------------------- | :------------ | :-------------------------------------------- |
+| id  | BIGSERIAL | 主キー   |
+| analysis_condition_id | BIGINT| 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
+| stock_code | VARCHAR(10)   | 銘柄コード |
+| target_date| DATE  | 評価開始日（この日からシミュレーション開始）|
+| target_close_price| NUMERIC(12,2) | 評価開始日の終値（参考用） |
+| entry_date | DATE | **エントリー情報** エントリー日 |
+| entry_close_price | NUMERIC(12,2) | **エントリー情報**エントリー時の株価（終値）|
+| entry_quantity | INTEGER | **エントリー情報**エントリーした株数（100株単位など）|
+| entry_amount | NUMERIC(14,2) | **エントリー情報**エントリー時の金額（株価×数量）|
+| exit_date | DATE | **エグジット情報**エグジット日 |
+| exit_close_price | NUMERIC(12,2) | **エグジット情報**エグジット時の株価（終値）|
+| exit_quantity | INTEGER | **エグジット情報**エグジットした株数 |
+| exit_amount | NUMERIC(14,2) |**エグジット情報** エグジット時の金額 |
+| gross_profit_amount | NUMERIC(14,2) | **損益情報**税引前の利益金額 |
+| gross_profit_rate | NUMERIC(7,4) | **税引前の利益率** |
+| net_profit_amount | NUMERIC(14,2) | **損益情報**税引後の利益金額 |
+| net_profit_rate | NUMERIC(7,4) | **損益情報**税引後の利益率 |
+| created_at | TIMESTAMP | 作成日時 |
+| updated_at | TIMESTAMP | 更新日時 |
+
+---
+
+## 3 **sptch_simulation_results_summary**
+
+→ プラン全体の総合結果
+
+| カラム名| データ型  | 説明|
+| :---------------------- | :-------- | :-------------------------------------------- |
+| id  | BIGSERIAL | 主キー   |
+| analysis_condition_id | BIGINT| 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
+| gross_profit_amount | NUMERIC(14,2) | プラン全体の損益:税引前の総利益金額 |
+| gross_profit_rate | NUMERIC(7,4) | プラン全体の損益:税引前の利益率（総合）|
+| net_profit_amount | NUMERIC(14,2) | プラン全体の損益:税引後の総利益金額 |
+| net_profit_rate | NUMERIC(7,4) | プラン全体の損益:税引後の利益率（総合）|
+| created_at | TIMESTAMP | 作成日時 |
+| updated_at | TIMESTAMP | 更新日時 |
+
+---
+## 4 **sptch_simulation_results**
+
+* シミュレーションの実行状況と、その結果を保存するためのテーブル
+
+* ユーザーが「シミュレーション実施」ボタンを押すと、initiateSimulationAction がこのテーブルに新しい行を1つ作成します。この時点では、status カラムに「pending (処理待ち)」という値が入ります。
+
+* その後、バックグラウンドで動作している別のプログラム（Pythonなど）が、このテーブルを定期的にチェックし、status が「pending」の行を見つけたら、実際の重いシミュレーション計算を開始します。計算が完了したら、結果をこのテーブルの result_json や summary_json といったカラムに書き込み、status を「completed (完了)」に更新する、という流れです。
+
+
+| カラム名 | 型 | 制約 | 説明 |
+| --- | --- | --- | --- |
+| id | BIGSERIAL | PRIMARY KEY | シミュレーション結果ID (自動採番される主キー) |
+| analysis_condition_id  | BIGINT | NOT NULL, FK | 分析プランID (sptch_analysis_conditionsテーブルのIDを参照) |
+| user_id | UUID | NOT NULL, FK | ユーザーID (auth.usersテーブルのIDを参照) |
+| status | TEXT | NOT NULL, DEFAULT 'pending' | 処理ステータス (pending (保留中), running (実行中), completed (完了), failed (失敗)) |
+| summary_json | JSONB | NULL | 結果の概要 (利益率、勝率など、表示用の主要な値がJSON形式で保存されます) |
+| result_json | JSONB | NULL | 詳細なシミュレーション結果 (全取引履歴など、詳細なデータがJSON形式で保存されます) |
+| error_message | TEXT | NULL | 処理が失敗した場合のエラーメッセージ |
+| started_at | TIMESTAMPTZ | NULL | シミュレーション開始時刻 |
+| completed_at | TIMESTAMPTZ | NULL | シミュレーション完了時刻 |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | レコードが作成された日時 |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | レコードが最後に更新された日時 |
+
+
+各カラムの役割
+
+* id: このシミュレーション結果を一意に識別するためのIDです。
+* analysis_condition_id : どの分析プランに基づいたシミュレーションかを示すためのIDです。
+* user_id: どのユーザーが実行したシミュレーションかを示すためのIDです。
+    * status: シミュレーションの現在の状態を示します。
+    * pending: 処理待ち
+    * running: 処理中
+    * completed: 正常に完了
+    * failed: エラーで失敗
+* summary_json: 結果の概要（総利益率、勝率、最大ドローダウンなど）を保存します。一覧画面などで素早く表示するために使います。
+* result_json: 全ての取引履歴など、詳細なシミュレーション結果の生データを保存します。
+* error_message: statusがfailedになった場合に、その原因を記録します。
+* started_at, completed_at: 処理の開始時刻と完了時刻を記録します。
+
+## 5 **sptch_simuration_result_logs**
+| カラム名                 | 型           | 制約                      | 説明                                                              |
+|----------------------|-------------|-------------------------|-----------------------------------------------------------------|
+| id                   | BIGSERIAL   | PRIMARY KEY             | ログエントリID (自動採番される主キー)                                           |
+| simulation_result_id | BIGINT      | NOT NULL, FK            | 関連するシミュレーション結果ID (sptch_simulation_results.id を参照)              |
+| step_name            | TEXT        | NOT NULL                | 処理ステップ名 (例: data_acquisition, filtering, signal_detection_7203) |
+| status               | TEXT        | NOT NULL                | ステップのステータス (started (開始), completed (完了), failed (失敗))          |
+| started_at           | TIMESTAMPTZ | NOT NULL, DEFAULT now() | ステップ開始時刻                                                        |
+| completed_at         | TIMESTAMPTZ | NULL                    | ステップ完了時刻                                                        |
+| duration_ms          | BIGINT      | NULL                    | 処理時間 (ミリ秒単位)                                                    |
+| details              | JSONB       | NULL                    | 追加情報 (処理件数、対象銘柄など、JSON形式で保存されます)                                |
+### ログ記録のワークフロー
+この新しいテーブルは、バックグラウンドで動作するシミュレーションプログラム（Pythonなど）から利用されることを想定しています。具体的な流れは以下のようになります。
+
+#### 1.シミュレーション開始
+
+バックエンドのプログラムが sptch_simulation_results から status が pending のジョブを取得します。
+sptch_simulation_results の status を running に更新し、started_at に現在時刻を記録します。
+
+#### 2.各処理ステップのログを記録
+
+* ドキュメントのフロー図にある各処理（例：「01.02 市場データ取得処理」）の開始直前に、sptch_simulation_logs に新しいレコードを挿入します。
+
+```sql
+-- 例: 市場データ取得処理の開始ログ
+INSERT INTO sptch_simulation_logs 
+  (simulation_result_id, step_name, status) 
+VALUES 
+  (123, 'market_data_acquisition', 'started'); 
+-- 123はsptch_simulation_results.id
+```
+* 処理が完了した直後に、先ほど挿入したレコードを更新します。
+
+```sql
+-- 例: 市場データ取得処理の完了ログ
+UPDATE sptch_simulation_logs 
+SET 
+  status = 'completed', 
+  completed_at = now(),
+  duration_ms = EXTRACT(EPOCH FROM (now() - started_at)) * 1000, -- 処理時間をミリ秒で計算
+  details = '{"rows_fetched": 50000}'::jsonb
+WHERE id = (先ほど挿入したログのID);
+```
+#### 3.シミュレーション完了
+
+* 全ての処理が完了したら、sptch_simulation_results の status を completed に、completed_at に完了時刻を記録します。
+#### メリット
+この設計により、以下のことが可能になります。
+
+* パフォーマンス分析: duration_ms を集計することで、どの処理ステップが全体のボトルネックになっているかを正確に特定できます。
+* 進捗の可視化: フロントエンドでこのログテーブルをポーリング（定期的に確認）すれば、ユーザーに対して「現在、銘柄XXXのシグナルを検出中です...」といった詳細な進捗状況を表示できます。
+* エラー追跡: 処理が途中で失敗した場合、どの step_name で status が failed になったかを確認することで、エラーの原因調査が容易になります。
+この変更は主にバックエンドの処理に関するもので、ご提示いただいた initiateSimulationAction などのフロントエンド側のコードを直接変更する必要はありません。
+
+
+
+# 🚩 補足
+
+* **「stocks」→「フィルタ結果」**（この銘柄は投資対象になるか？）
+* **「trade」→「個別のEntry/Exit」**（売買の実行と結果）
+* **「summary」→「プランの総合利益」**（最終的な成績）
+
+---
+
+<details>
+<summary>DDL</summmary>
+
+```SQL
+
+CREATE TABLE sptch_simulation_results_stocks (
+    id BIGSERIAL PRIMARY KEY,
+    analysis_condition_id BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
+    stock_code VARCHAR(10) NOT NULL,
+    filter_reason TEXT,
+    score INTEGER NOT NULL DEFAULT 0,
+    manual_score INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- インデックス（検索高速化）
+CREATE INDEX idx_srs_analysis_stock ON sptch_simulation_results_stocks(analysis_condition_id, stock_code);
+
+
+CREATE TABLE sptch_simulation_results_trade (
+    id BIGSERIAL PRIMARY KEY,
+    analysis_condition_id  BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
+    stock_code VARCHAR(10) NOT NULL,
+    target_date DATE NOT NULL,
+    target_close_price NUMERIC(12,2),
+    
+    -- Entry
+    entry_date DATE,
+    entry_close_price NUMERIC(12,2),
+    entry_quantity INTEGER,
+    entry_amount NUMERIC(14,2),
+    
+    -- Exit
+    exit_date DATE,
+    exit_close_price NUMERIC(12,2),
+    exit_quantity INTEGER,
+    exit_amount NUMERIC(14,2),
+    
+    -- Profit
+    gross_profit_amount NUMERIC(14,2),
+    gross_profit_rate NUMERIC(7,4),
+    net_profit_amount NUMERIC(14,2),
+    net_profit_rate NUMERIC(7,4),
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- インデックス
+CREATE INDEX idx_srt_analysis_stock_date 
+    ON sptch_simulation_results_trade(analysis_condition_id, stock_code, target_date);
+
+
+CREATE TABLE sptch_simulation_results_summary (
+    id BIGSERIAL PRIMARY KEY,
+    analysis_condition_id  BIGINT NOT NULL UNIQUE REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
+
+    gross_profit_amount NUMERIC(14,2),
+    gross_profit_rate NUMERIC(7,4),
+    net_profit_amount NUMERIC(14,2),
+    net_profit_rate NUMERIC(7,4),
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE public.sptch_simulation_results (
+    id BIGSERIAL PRIMARY KEY,
+    analysis_condition_id BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', -- pending, running, completed, failed
+    summary_json JSONB NULL,
+    result_json JSONB NULL,
+    error_message TEXT NULL,
+    started_at TIMESTAMPTZ NULL,
+    completed_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+);
+
+-- コメント
+COMMENT ON COLUMN public.sptch_simulation_results.id IS 'シミュレーション結果ID';
+COMMENT ON COLUMN public.sptch_simulation_results.analysis_condition_id IS '分析プランID (sptch_analysis_conditions.id)';
+COMMENT ON COLUMN public.sptch_simulation_results.user_id IS 'ユーザーID';
+COMMENT ON COLUMN public.sptch_simulation_results.status IS '処理ステータス (pending, running, completed, failed)';
+COMMENT ON COLUMN public.sptch_simulation_results.summary_json IS '結果の概要 (利益率、勝率など表示用の主要な値)';
+COMMENT ON COLUMN public.sptch_simulation_results.result_json IS '詳細なシミュレーション結果 (全取引履歴など)';
+COMMENT ON COLUMN public.sptch_simulation_results.error_message IS '処理が失敗した場合のエラーメッセージ';
+COMMENT ON COLUMN public.sptch_simulation_results.started_at IS 'シミュレーション開始時刻';
+COMMENT ON COLUMN public.sptch_simulation_results.completed_at IS 'シミュレーション完了時刻';
+
+-- バックエンドのワーカーが効率的に処理待ちのジョブを見つけられるように、statusカラムにインデックスを作成します。
+CREATE INDEX idx_sptch_simulation_results_status ON public.sptch_simulation_results(status);
+
+
+CREATE TABLE public.sptch_simulation_logs (
+    id BIGSERIAL PRIMARY KEY,
+    simulation_result_id BIGINT NOT NULL,
+    step_name TEXT NOT NULL,
+    status TEXT NOT NULL, -- 'started', 'completed', 'failed'
+    started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at TIMESTAMPTZ,
+    duration_ms BIGINT,
+    details JSONB,
+    CONSTRAINT fk_simulation_result FOREIGN KEY (simulation_result_id) REFERENCES public.sptch_simulation_results(id) ON DELETE CASCADE
+);
+
+COMMENT ON TABLE public.sptch_simulation_logs IS 'シミュレーションの各処理ステップの実行ログ';
+COMMENT ON COLUMN public.sptch_simulation_logs.id IS 'ログエントリID';
+COMMENT ON COLUMN public.sptch_simulation_logs.simulation_result_id IS '関連するシミュレーション結果ID (sptch_simulation_results.id)';
+COMMENT ON COLUMN public.sptch_simulation_logs.step_name IS '処理ステップ名 (例: data_acquisition, filtering, signal_detection_7203)';
+COMMENT ON COLUMN public.sptch_simulation_logs.status IS 'ステップのステータス (started, completed, failed)';
+COMMENT ON COLUMN public.sptch_simulation_logs.started_at IS 'ステップ開始時刻';
+COMMENT ON COLUMN public.sptch_simulation_logs.completed_at IS 'ステップ完了時刻';
+COMMENT ON COLUMN public.sptch_simulation_logs.duration_ms IS '処理時間 (ミリ秒)';
+COMMENT ON COLUMN public.sptch_simulation_logs.details IS '追加情報 (処理件数、対象銘柄など)';
+
+-- 特定のシミュレーション結果に関連するログを高速に検索するためのインデックス
+CREATE INDEX idx_sptch_simulation_logs_result_id ON public.sptch_simulation_logs(simulation_result_id);
+
+
+```
+
+</details>
+
 ### 3. ServerFunction (SQL関数例)
 PostgreSQLの関数例として、株価の仮説分析を行うための関数です。フロントエンドから呼び出され、動的なパラメータと日付範囲に基づいて、仮説の前提条件の達成状況、結果条件の達成状況、および各分析ポイントの詳細な情報をテーブル形式で返します。
+
 
 <details>
 <summary>StockCode0002関数 (PostgreSQL)</summary>
@@ -171,238 +491,4 @@ BEGIN
 END;
 $$;
 ```
-</details>
-
-4. 特徴量の作成（Feature Engineering）
-株価毎に、仮説に対しての実現率を調査するために使用する特徴量です。
-
-起点（株購入時点）の変数A日前（3日前など）。
-
-起点（株購入時点）と変数A日前での値上がり率：変数B%（3%など）。
-
-起点（株購入時点）の変数C日後（10日後など）。
-
-起点（株購入時点）と変数C日後での値上がり率：変数D%（10%など）。
-
-5. ラベリング（必要に応じて）
-分類問題（上がる/下がる） → ラベル（1:上昇, 0:下降）を付ける
-
-
-
-## ① **sptch_simulation_results_stocks**
-
-→ フィルタリング結果（銘柄ごとの判定結果）
-
-| カラム名| データ型| 説明|
-| :---------------------- | :---------- | :-------------------------------------------- |
-| id  | BIGSERIAL   | 主キー   |
-| analysis_condition_id | BIGINT  | 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
-| stock_code | VARCHAR(10) | 銘柄コード |
-| filter_reason  | TEXT| 除外理由（例: 出来高不足・資本金不足・投資額オーバーなど）|
-| score   | INTEGER | 自動判定のスコア（0: 対象外、1: 対象）|
-| manual_score   | INTEGER | 手動での調整スコア（0: 対象外、1: 対象）   |
-| created_at | TIMESTAMP   | 作成日時  |
-| updated_at | TIMESTAMP   | 更新日時  |
-
-## ② **sptch_simulation_results_trade**
-
-→ 銘柄ごとのトレードシミュレーション結果（Entry→Exit）
-
-| カラム名| データ型  | 説明|
-| :---------------------- | :------------ | :-------------------------------------------- |
-| id  | BIGSERIAL | 主キー   |
-| analysis_condition_id | BIGINT| 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
-| stock_code | VARCHAR(10)   | 銘柄コード |
-| target_date| DATE  | 評価開始日（この日からシミュレーション開始）|
-| target_close_price| NUMERIC(12,2) | 評価開始日の終値（参考用） |
-| entry_date | DATE | **エントリー情報** エントリー日 |
-| entry_close_price | NUMERIC(12,2) | **エントリー情報**エントリー時の株価（終値）|
-| entry_quantity | INTEGER | **エントリー情報**エントリーした株数（100株単位など）|
-| entry_amount | NUMERIC(14,2) | **エントリー情報**エントリー時の金額（株価×数量）|
-| exit_date | DATE | **エグジット情報**エグジット日 |
-| exit_close_price | NUMERIC(12,2) | **エグジット情報**エグジット時の株価（終値）|
-| exit_quantity | INTEGER | **エグジット情報**エグジットした株数 |
-| exit_amount | NUMERIC(14,2) |**エグジット情報** エグジット時の金額 |
-| gross_profit_amount | NUMERIC(14,2) | **損益情報**税引前の利益金額 |
-| gross_profit_rate | NUMERIC(7,4) | **税引前の利益率** |
-| net_profit_amount | NUMERIC(14,2) | **損益情報**税引後の利益金額 |
-| net_profit_rate | NUMERIC(7,4) | **損益情報**税引後の利益率 |
-| created_at | TIMESTAMP | 作成日時 |
-| updated_at | TIMESTAMP | 更新日時 |
-
----
-
-## ③ **sptch_simulation_results_summary**（新規）
-
-→ プラン全体の総合結果
-
-| カラム名| データ型  | 説明|
-| :---------------------- | :-------- | :-------------------------------------------- |
-| id  | BIGSERIAL | 主キー   |
-| analysis_condition_id | BIGINT| 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
-| gross_profit_amount | NUMERIC(14,2) | プラン全体の損益:税引前の総利益金額 |
-| gross_profit_rate | NUMERIC(7,4) | プラン全体の損益:税引前の利益率（総合）|
-| net_profit_amount | NUMERIC(14,2) | プラン全体の損益:税引後の総利益金額 |
-| net_profit_rate | NUMERIC(7,4) | プラン全体の損益:税引後の利益率（総合）|
-| created_at | TIMESTAMP | 作成日時 |
-| updated_at | TIMESTAMP | 更新日時 |
-
----
-## sptch_simulation_results
-
-| カラム名 | 型 | 制約 | 説明 |
-| --- | --- | --- | --- |
-| id | BIGSERIAL | PRIMARY KEY | シミュレーション結果ID (自動採番される主キー) |
-| plan_id | BIGINT | NOT NULL, FK | 分析プランID (sptch_analysis_conditionsテーブルのIDを参照) |
-| user_id | UUID | NOT NULL, FK | ユーザーID (auth.usersテーブルのIDを参照) |
-| status | TEXT | NOT NULL, DEFAULT 'pending' | 処理ステータス (pending (保留中), running (実行中), completed (完了), failed (失敗)) |
-| summary_json | JSONB | NULL | 結果の概要 (利益率、勝率など、表示用の主要な値がJSON形式で保存されます) |
-| result_json | JSONB | NULL | 詳細なシミュレーション結果 (全取引履歴など、詳細なデータがJSON形式で保存されます) |
-| error_message | TEXT | NULL | 処理が失敗した場合のエラーメッセージ |
-| started_at | TIMESTAMPTZ | NULL | シミュレーション開始時刻 |
-| completed_at | TIMESTAMPTZ | NULL | シミュレーション完了時刻 |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | レコードが作成された日時 |
-| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | レコードが最後に更新された日時 |
-
-sptch_simulation_results というテーブルは、シミュレーションの実行状況と、その結果を保存するために設計されたテーブルを想定しています。
-
-ユーザーが「シミュレーション実施」ボタンを押すと、initiateSimulationAction がこのテーブルに新しい行を1つ作成します。この時点では、status カラムに「pending (処理待ち)」という値が入ります。
-
-その後、バックグラウンドで動作している別のプログラム（Pythonなど）が、このテーブルを定期的にチェックし、status が「pending」の行を見つけたら、実際の重いシミュレーション計算を開始します。計算が完了したら、結果をこのテーブルの result_json や summary_json といったカラムに書き込み、status を「completed (完了)」に更新する、という流れです。
-
-各カラムの役割
-
-* id: このシミュレーション結果を一意に識別するためのIDです。
-* plan_id: どの分析プランに基づいたシミュレーションかを示すためのIDです。
-* user_id: どのユーザーが実行したシミュレーションかを示すためのIDです。
-    * status: シミュレーションの現在の状態を示します。
-    * pending: 処理待ち
-    * running: 処理中
-    * completed: 正常に完了
-    * failed: エラーで失敗
-* summary_json: 結果の概要（総利益率、勝率、最大ドローダウンなど）を保存します。一覧画面などで素早く表示するために使います。
-* result_json: 全ての取引履歴など、詳細なシミュレーション結果の生データを保存します。
-* error_message: statusがfailedになった場合に、その原因を記録します。
-* started_at, completed_at: 処理の開始時刻と完了時刻を記録します。
-
-# 🏗 ER図イメージ
-
-```
-sptch_analysis_conditions
-├── sptch_simulation_results_stocks   ← フィルタリング銘柄結果
-├── sptch_simulation_results_trade    ← トレードシミュレーション結果
-└── sptch_simulation_results_summary  ← プラン全体の総合損益
-```
-
----
-
-# 🚩 補足
-
-* **「stocks」→「フィルタ結果」**（この銘柄は投資対象になるか？）
-* **「trade」→「個別のEntry/Exit」**（売買の実行と結果）
-* **「summary」→「プランの総合利益」**（最終的な成績）
-
----
-
-<details><summary>DDL</summmary>
-
-```SQL
-
-CREATE TABLE sptch_simulation_results_stocks (
-    id BIGSERIAL PRIMARY KEY,
-    analysis_condition_id BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
-    stock_code VARCHAR(10) NOT NULL,
-    filter_reason TEXT,
-    score INTEGER NOT NULL DEFAULT 0,
-    manual_score INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- インデックス（検索高速化）
-CREATE INDEX idx_srs_analysis_stock ON sptch_simulation_results_stocks(analysis_condition_id, stock_code);
-
-
-CREATE TABLE sptch_simulation_results_trade (
-    id BIGSERIAL PRIMARY KEY,
-    analysis_condition_id BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
-    stock_code VARCHAR(10) NOT NULL,
-    target_date DATE NOT NULL,
-    target_close_price NUMERIC(12,2),
-    
-    -- Entry
-    entry_date DATE,
-    entry_close_price NUMERIC(12,2),
-    entry_quantity INTEGER,
-    entry_amount NUMERIC(14,2),
-    
-    -- Exit
-    exit_date DATE,
-    exit_close_price NUMERIC(12,2),
-    exit_quantity INTEGER,
-    exit_amount NUMERIC(14,2),
-    
-    -- Profit
-    gross_profit_amount NUMERIC(14,2),
-    gross_profit_rate NUMERIC(7,4),
-    net_profit_amount NUMERIC(14,2),
-    net_profit_rate NUMERIC(7,4),
-
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- インデックス
-CREATE INDEX idx_srt_analysis_stock_date 
-    ON sptch_simulation_results_trade(analysis_condition_id, stock_code, target_date);
-
-
-CREATE TABLE sptch_simulation_results_summary (
-    id BIGSERIAL PRIMARY KEY,
-    analysis_condition_id BIGINT NOT NULL UNIQUE REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
-
-    gross_profit_amount NUMERIC(14,2),
-    gross_profit_rate NUMERIC(7,4),
-    net_profit_amount NUMERIC(14,2),
-    net_profit_rate NUMERIC(7,4),
-
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-
-CREATE TABLE public.sptch_simulation_results (
-    id BIGSERIAL PRIMARY KEY,
-    plan_id BIGINT NOT NULL,
-    user_id UUID NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending', -- pending, running, completed, failed
-    summary_json JSONB NULL,
-    result_json JSONB NULL,
-    error_message TEXT NULL,
-    started_at TIMESTAMPTZ NULL,
-    completed_at TIMESTAMPTZ NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT fk_plan FOREIGN KEY (plan_id) REFERENCES public.sptch_analysis_conditions(id) ON DELETE CASCADE,
-    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
-);
-
--- コメント
-COMMENT ON COLUMN public.sptch_simulation_results.id IS 'シミュレーション結果ID';
-COMMENT ON COLUMN public.sptch_simulation_results.plan_id IS '分析プランID (sptch_analysis_conditions.id)';
-COMMENT ON COLUMN public.sptch_simulation_results.user_id IS 'ユーザーID';
-COMMENT ON COLUMN public.sptch_simulation_results.status IS '処理ステータス (pending, running, completed, failed)';
-COMMENT ON COLUMN public.sptch_simulation_results.summary_json IS '結果の概要 (利益率、勝率など表示用の主要な値)';
-COMMENT ON COLUMN public.sptch_simulation_results.result_json IS '詳細なシミュレーション結果 (全取引履歴など)';
-COMMENT ON COLUMN public.sptch_simulation_results.error_message IS '処理が失敗した場合のエラーメッセージ';
-COMMENT ON COLUMN public.sptch_simulation_results.started_at IS 'シミュレーション開始時刻';
-COMMENT ON COLUMN public.sptch_simulation_results.completed_at IS 'シミュレーション完了時刻';
-
--- バックエンドのワーカーが効率的に処理待ちのジョブを見つけられるように、statusカラムにインデックスを作成します。
-CREATE INDEX idx_sptch_simulation_results_status ON public.sptch_simulation_results(status);
-
-
-
-```
-
 </details>

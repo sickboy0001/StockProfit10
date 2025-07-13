@@ -327,9 +327,12 @@ const StockChartView: React.FC<StockChartProps> = ({
       !chartContainerRef.current
     ) {
       // ★ 表示位置情報を隠す
-      if (tooltipPosition?.visible) {
-        setTooltipPosition({ ...tooltipPosition, visible: false });
-      }
+      setTooltipPosition((current) => {
+        if (current?.visible) {
+          return { ...current, visible: false };
+        }
+        return current;
+      });
       return;
     }
 
@@ -360,9 +363,20 @@ const StockChartView: React.FC<StockChartProps> = ({
       top = 0;
     }
 
-    // ★ 計算した位置と表示フラグをセット
-    setTooltipPosition({ left, top, visible: true });
-  }, [rawMousePosition, tooltipContent, tooltipPosition]); // 依存配列にrawMousePositionとtooltipContentを追加
+    // ★★★ 改善点 ★★★
+    // 計算結果が現在の位置と異なる場合のみ更新 (関数アップデートを使用)
+    setTooltipPosition((current) => {
+      if (
+        !current ||
+        current.left !== left ||
+        current.top !== top ||
+        !current.visible
+      ) {
+        return { left, top, visible: true };
+      }
+      return current;
+    });
+  }, [rawMousePosition, tooltipContent]); // ★ 依存配列はこれでOK
 
   // データが更新されたときにチャートにセット
   useEffect(() => {

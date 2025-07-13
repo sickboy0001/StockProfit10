@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getCompanyStockDetail } from "@/app/actions/readAndRegistCompanyStockDetail"; // アクションのパスを確認
+import { readAndRegistCompanyStockDetail } from "@/app/actions/readAndRegistCompanyStockDetail"; // アクションのパスを確認
 import { CompanyStockDetail } from "@/types/stock";
 
 interface TestGetCompanyStockDetailProps {
@@ -30,7 +30,7 @@ export default function TestGetCompanyStockDetail(
       setLoading(true);
       setError(null);
       try {
-        const detail = await getCompanyStockDetail(stockCode);
+        const detail = await readAndRegistCompanyStockDetail(stockCode);
         setStockDetail(detail);
       } catch (e: unknown) {
         let errorMessage = "データの取得に失敗しました。";

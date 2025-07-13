@@ -65,6 +65,12 @@ export const headerNavItems: NavItem[] = [
         href: "/stock/MasterImportJsx",
       },
       {
+        id: "MarketCalendar",
+        label: "MarketCalendar",
+        roles: ["ADMIN", "MAN", "MEN", "DEB"],
+        href: "/MarketCalendar",
+      },
+      {
         id: "userProfile",
         label: "profile",
         href: "/user/profile",

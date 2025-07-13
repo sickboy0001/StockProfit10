@@ -29,6 +29,7 @@ export interface StockDetails {
   listing_date?: string | null; // DBからは文字列で取得されることを想定
   created_at: string; // DBからは文字列で取得されることを想定
   updated_at: string; // DBからは文字列で取得されることを想定
+  company_detail: CompanyStockDetail | null;
 }
 
 // CompanyStockDetail 型をインポートまたはここで定義

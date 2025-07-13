@@ -3,7 +3,10 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { searchStocksByName, SearchedStockInfo } from "@/app/actions/stock"; // 銘柄名検索アクションをインポート
+import {
+  SearchedStockInfo,
+  searchStocksByName,
+} from "@/app/actions/readAndRegistStockCompanyDetails";
 
 interface StockCodeSearchInputProps {
   value: string; // 親コンポーネントから渡される現在の銘柄コード（表示用）

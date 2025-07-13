@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>04_AnalyzeResults: プラン結果分析</title>
+    
+    <style>
+        /* グローバルリセット（必要最小限） */
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            color: #333;
+            background-color: #f8f9fa;
+            padding: 20px; /* 全体的な余白 */
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        /* ヘッダーのスタイル */
+        .header-info-card {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: flex; /* Flexboxでカラムレイアウト */
+            flex-wrap: wrap; /* 小さい画面で折り返し */
+        }
+        .header-info-col {
+            flex: 1 1 50%; /* 2カラムレイアウト */
+            min-width: 300px; /* 小さい画面での折り返し基準 */
+        }
+        .header-info-item {
+            margin-bottom: 5px;
+        }
+        .header-info-item strong {
+            display: inline-block;
+            width: 120px; /* ラベルの幅を固定 */
+        }
+        .header-info-item .ps-3 { /* 課税前・後などのインデント */
+            margin-left: 15px;
+        }
+        
+        /* タブナビゲーションのスタイル */
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 20px;
+            padding: 0; /* ulのデフォルトパディングをリセット */
+        }
+        .nav-item {
+            list-style: none; /* リストマーカーを削除 */
+            margin-bottom: -1px; /* ボーダーが重なるように調整 */
+        }
+        .nav-link {
+            padding: 10px 15px;
+            border: 1px solid transparent;
+            border-top-left-radius: 0.25rem;
+            border-top-right-radius: 0.25rem;
+            color: #007bff;
+            text-decoration: none;
+            cursor: pointer;
+            display: block; /* ボタンのように振る舞う */
+        }
+        .nav-link:hover {
+            border-color: #e9ecef #e9ecef #dee2e6;
+        }
+        .nav-link.active {
+            color: #495057;
+            background-color: #fff;
+            border-color: #dee2e6 #dee2e6 #fff;
+        }
+        .tab-content .tab-pane {
+            display: none; /* 非アクティブなタブコンテンツを非表示 */
+        }
+        .tab-content .tab-pane.active {
+            display: block; /* アクティブなタブコンテンツを表示 */
+        }
+
+        /* テーブル共通スタイル */
+        .table-custom-bordered {
+            border: 1px solid #dee2e6;
+            border-collapse: collapse; /* セルのボーダーを結合 */
+            width: 100%; /* 親要素の幅いっぱいに */
+            table-layout: fixed; /* テーブル幅固定 */
+        }
+        .table-custom-bordered th, .table-custom-bordered td {
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+            padding: 8px; /* パディング調整 */
+            white-space: nowrap; /* テキストの折り返しを防止 */
+            overflow: hidden;    /* はみ出たコンテンツを非表示 */
+            text-overflow: ellipsis; /* はみ出たテキストを省略 */
+        }
+        .table-custom-bordered thead th {
+            background-color: #e9ecef;
+            font-weight: bold;
+            text-align: center; /* ヘッダーテキストを中央揃え */
+            vertical-align: bottom; /* ヘッダーの文字を下に寄せる */
+        }
+        .table-custom-bordered tbody tr:nth-child(odd) {
+            background-color: #f2f2f2; /* ストライプ */
+        }
+        .table-custom-bordered a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .table-custom-bordered a:hover {
+            text-decoration: underline;
+        }
+
+        /* 取引一覧テーブルの特定の幅調整 */
+        /* th:nth-child(n) と td:nth-child(n) で個別のカラム幅を設定 */
+        .table-trade-list th:nth-child(1), .table-trade-list td:nth-child(1) { width: 100px; /* 起点日 */ }
+        /* 結合ヘッダーを持つテーブルのカラムは、その下の詳細カラムの合計幅を考慮して調整 */
+        .table-trade-list th:nth-child(2), .table-trade-list td:nth-child(2) { width: 80px; } /* 銘柄コード */
+        .table-trade-list th:nth-child(3), .table-trade-list td:nth-child(3) { width: 120px; } /* 銘柄名 */
+        .table-trade-list th:nth-child(4), .table-trade-list td:nth-child(4) { width: 80px; } /* 市場 */
+        /* PREVIEW の2カラム (DATE+CLOSE) */
+        .table-trade-list th:nth-child(5), .table-trade-list td:nth-child(5) { width: 100px; } /* PREVIEW DATE */
+        .table-trade-list th:nth-child(6), .table-trade-list td:nth-child(6) { width: 80px; } /* PREVIEW CLOSE */
+        /* ENTRY の3カラム (DATE+CLOSE+VOLUME) */
+        .table-trade-list th:nth-child(7), .table-trade-list td:nth-child(7) { width: 100px; } /* ENTRY DATE */
+        .table-trade-list th:nth-child(8), .table-trade-list td:nth-child(8) { width: 80px; } /* ENTRY CLOSE */
+        .table-trade-list th:nth-child(9), .table-trade-list td:nth-child(9) { width: 80px; } /* ENTRY VOLUME */
+        .table-trade-list th:nth-child(10), .table-trade-list td:nth-child(10) { width: 100px; } /* ENTRY PRICE */
+        /* EXIT の3カラム */
+        .table-trade-list th:nth-child(11), .table-trade-list td:nth-child(11) { width: 100px; } /* EXIT DATE */
+        .table-trade-list th:nth-child(12), .table-trade-list td:nth-child(12) { width: 80px; } /* EXIT CLOSE */
+        .table-trade-list th:nth-child(13), .table-trade-list td:nth-child(13) { width: 80px; } /* EXIT VOLUME */
+        .table-trade-list th:nth-child(14), .table-trade-list td:nth-child(14) { width: 100px; } /* EXIT PRICE */
+        /* RESULT の2カラム */
+        .table-trade-list th:nth-child(15), .table-trade-list td:nth-child(15) { width: 90px; } /* PROFIT */
+        .table-trade-list th:nth-child(16), .table-trade-list td:nth-child(16) { width: 60px; } /* P-M */
+        /* RESULT(F) の2カラム */
+        .table-trade-list th:nth-child(17), .table-trade-list td:nth-child(17) { width: 90px; } /* PROFIT(F) */
+        .table-trade-list th:nth-child(18), .table-trade-list td:nth-child(18) { width: 60px; } /* P-M(F) */
+        .table-trade-list th:nth-child(19), .table-trade-list td:nth-child(19) { width: 100px; } /* チャート参照 */
+
+
+        /* ヘッダー結合用スタイル */
+        .table-trade-list thead th.colspan-header {
+            text-align: center;
+            background-color: #d1e7dd; /* 色を付けて目立たせる */
+        }
+        .table-trade-list thead tr:first-child th {
+            border-bottom: none; /* 上段ヘッダーの下線は不要 */
+        }
+        .table-trade-list thead tr:nth-child(2) th {
+            border-top: none; /* 下段ヘッダーの上線は不要 */
+        }
+        
+        /* 銘柄一覧テーブルの幅調整 */
+        .table-stock-list th:nth-child(1), .table-stock-list td:nth-child(1) { width: 60px; } /* 対象 */
+        .table-stock-list th:nth-child(2), .table-stock-list td:nth-child(2) { width: 80px; } /* コード */
+        .table-stock-list th:nth-child(3), .table-stock-list td:nth-child(3) { width: 150px; } /* 銘柄名 */
+        .table-stock-list th:nth-child(4), .table-stock-list td:nth-child(4) { width: 80px; } /* 市場 */
+        .table-stock-list th:nth-child(5), .table-stock-list td:nth-child(5) { width: 100px; } /* 株価 */
+        .table-stock-list th:nth-child(6), .table-stock-list td:nth-child(6) { width: 100px; } /* 最低株数 */
+        .table-stock-list th:nth-child(7), .table-stock-list td:nth-child(7) { width: 150px; } /* 最適購入金額 */
+        .table-stock-list th:nth-child(8), .table-stock-list td:nth-child(8) { width: 120px; } /* 資産 */
+        .table-stock-list th:nth-child(9), .table-stock-list td:nth-child(9) { width: auto; }   /* 理由 */
+
+        /* ログ画面のコンソールスタイル */
+        .log-console-container {
+            background-color: #000;
+            color: #0f0; /* 緑色の文字でコンソール感を出す */
+            font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap; /* 改行を維持 */
+            word-break: break-all;
+        }
+
+        /* 利益・損失の表示 */
+        .text-success { color: #28a745; } /* 緑 */
+        .text-danger { color: #dc3545; }  /* 赤 */
+
+        /* 基本的なフレックスコンテナ */
+        .d-flex { display: flex; }
+        .flex-wrap { flex-wrap: wrap; }
+        .flex-col-50 { flex: 1 1 50%; min-width: 300px; } /* ヘッダー情報のカラム分け用 */
+        .ps-3 { padding-left: 1rem; } /* 左パディング */
+        .mb-3 { margin-bottom: 1rem; } /* 下マージン */
+        .mb-4 { margin-bottom: 1.5rem; } /* 下マージン */
+
+        /* その他の汎用的なスタイル（Bootstrapから簡略化） */
+        .container-fluid { width: 100%; padding-right: 15px; padding-left: 15px; margin-right: auto; margin-left: auto; }
+        .alert { padding: 1rem 1rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: 0.25rem; }
+        .alert-info { color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb; }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; } /* スマホでの横スクロール */
+
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h2>04_AnalyzeResults: プラン結果分析</h2>
+
+        <div class="header-info-card">
+            <div class="header-info-col">
+                <div class="header-info-item"><strong>作成日時:</strong> <span id="createdAt"></span></div>
+                <div class="header-info-item"><strong>作成者:</strong> <span id="author"></span></div>
+                <div class="header-info-item"><strong>名前:</strong> <span id="name"></span></div>
+                <div class="header-info-item"><strong>メモ:</strong> <span id="memo"></span></div>
+                <div class="header-info-item"><strong>プラン名称:</strong> <span id="planName"></span></div>
+            </div>
+            <div class="header-info-col">
+                <div class="header-info-item"><strong>プラン合計での収益:</strong></div>
+                <div class="header-info-item ps-3">
+                    <span style="display: inline-block; width: 80px;">課税前:</span> <strong id="totalProfitBeforeTax"></strong>
+                </div>
+                <div class="header-info-item ps-3">
+                    <span style="display: inline-block; width: 80px;">課税後:</span> <strong id="totalProfitAfterTax"></strong>
+                </div>
+                <div class="header-info-item"><strong>投資した金額の合計:</strong> <span id="totalInvestedAmount"></span></div>
+                <div class="header-info-item"><strong>投資した銘柄数:</strong> <span id="totalStocks"></span> 銘柄</div>
+                <div class="header-info-item"><strong>銘柄当たりの平均:</strong> <span id="averagePerStock"></span></div>
+            </div>
+        </div>
+
+        <ul class="nav-tabs" id="analyzeResultTabs">
+            <li class="nav-item">
+                <button class="nav-link active" data-tab-target="plan-info">プランの情報</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-tab-target="stock-list">銘柄一覧</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-tab-target="trade-list">取引一覧</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-tab-target="log">ログ画面</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="analyzeResultTabContent">
+            <div class="tab-pane active" id="plan-info">
+                <h3>プランの情報</h3>
+                <p>現状のプランの画面が提示されます。（確認画面と同じ内容を想定）</p>
+                <div class="alert alert-info">
+                    ここに「プラン作成」画面と同様の、詳細なプラン設定情報が表示されることを想定しています。<br>
+                    例: 選択された戦略、期間、条件設定など。
+                </div>
+            </div>
+
+            <div class="tab-pane" id="stock-list">
+                <h3>銘柄一覧</h3>
+                <div class="table-responsive">
+                    <table class="table-custom-bordered table-stock-list">
+                        <thead>
+                            <tr>
+                                <th>対象</th>
+                                <th>コード</th>
+                                <th>銘柄名</th>
+                                <th>市場</th>
+                                <th>株価</th>
+                                <th>最低株数</th>
+                                <th>最適購入金額</th>
+                                <th>資産</th>
+                                <th>理由</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockListBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane" id="trade-list">
+                <h3>取引一覧</h3>
+                <div class="table-responsive">
+                    <table class="table-custom-bordered table-trade-list">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">起点日</th>
+                                <th colspan="3">銘柄</th>
+                                <th colspan="2" class="colspan-header">PREVIEW</th>
+                                <th colspan="3" class="colspan-header">ENTRY</th>
+                                <th colspan="3" class="colspan-header">EXIT</th>
+                                <th colspan="2" class="colspan-header">RESULT</th>
+                                <th colspan="2" class="colspan-header">RESULT(F)</th>
+                                <th rowspan="2">チャート参照</th>
+                            </tr>
+                            <tr>
+                                <th>コード</th>
+                                <th>名前</th>
+                                <th>市場</th>
+                                <th>DATE</th>
+                                <th>CLOSE</th>
+                                <th>DATE</th>
+                                <th>CLOSE</th>
+                                <th>VOLUME</th>
+                                <th>PRICE</th>
+                                <th>DATE</th>
+                                <th>CLOSE</th>
+                                <th>VOLUME</th>
+                                <th>PRICE</th>
+                                <th>PROFIT</th>
+                                <th>P-M</th>
+                                <th>PROFIT</th>
+                                <th>P-M</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tradeListBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane" id="log">
+                <h3>ログ画面</h3>
+                <div class="log-console-container" id="logConsoleContainer">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ダミーデータ
+        const data = {
+            planInfo: {
+                createdAt: '2025/06/20 10:00:00',
+                author: 'John Doe',
+                name: 'デモプランV1.0',
+                memo: '新戦略のバックテスト結果',
+                planName: '短期トレンドフォロー戦略',
+                totalProfitBeforeTax: 32000,
+                totalProfitAfterTax: 28000,
+                totalInvestedAmount: 700000,
+                totalStocks: 4,
+                averagePerStock: 175000
+            },
+            stockList: [
+                { target: '×', code: '1244', name: 'ｘｘｘ商事', market: '東証プライム', price: 12000, minShares: 100, optimalPurchaseAmount: 1200000, assets: '90,000百万', reason: '上限金額オーバー' },
+                { target: '×', code: '1333', name: 'ｘｘｘ自動車', market: '東証プライム', price: 300, minShares: 100, optimalPurchaseAmount: 30000, assets: '40百万', reason: '資本金NG' },
+                { target: '〇', code: '9801', name: '日本××', market: '東証プライム', price: 500, minShares: 100, optimalPurchaseAmount: 50000, assets: '200百万', reason: 'ー' },
+                { target: '〇', code: '9811', name: 'NTN', market: '東証プライム', price: 150, minShares: 100, optimalPurchaseAmount: 15000, assets: '300百万', reason: 'ー' },
+            ],
+            tradeList: [
+                {
+                    startDate: '2025-01-10', stockCode: '1234', stockName: 'xxx商事', market: 'xxxx',
+                    previewDate: '2025-01-07', previewClose: 1222,
+                    entryDate: '2025-01-10', entryClose: 1240, entryVolume: 200, entryPrice: 248000,
+                    exitDate: '2025-01-15', exitClose: 1300, exitVolume: 200, exitPrice: 260000,
+                    profit: 12000, profitMargin: 5, profitF: 12000, profitMarginF: 4
+                },
+                {
+                    startDate: '2025-02-08', stockCode: '1235', stockName: 'yyy商事', market: 'xxxx',
+                    previewDate: '2025-02-06', previewClose: 2200,
+                    entryDate: '2025-02-08', entryClose: 2300, entryVolume: 100, entryPrice: 230000,
+                    exitDate: '2025-02-15', exitClose: 2500, exitVolume: 100, exitPrice: 250000,
+                    profit: 20000, profitMargin: 9, profitF: 20000, profitMarginF: 8
+                },
+                {
+                    startDate: '2025-02-10', stockCode: '9001', stockName: 'zzz商事', market: 'xxxx',
+                    previewDate: '2025-02-07', previewClose: 1001,
+                    entryDate: '2025-02-10', entryClose: 1201, entryVolume: 200, entryPrice: 240200,
+                    exitDate: '2025-02-15', exitClose: 1500, exitVolume: 200, exitPrice: 300000,
+                    profit: 59800, profitMargin: 24.89, profitF: 59800, profitMarginF: 24.89
+                },
+                {
+                    startDate: '2025-03-10', stockCode: '9002', stockName: 'vvvvv', market: 'xxxx',
+                    previewDate: '2025-03-07', previewClose: 300,
+                    entryDate: '2025-03-10', entryClose: 340, entryVolume: 600, entryPrice: 204000,
+                    exitDate: '2025-03-15', exitClose: 370, exitVolume: 600, exitPrice: 222000,
+                    profit: 18000, profitMargin: 8.82, profitF: 18000, profitMarginF: 8.82
+                },
+            ],
+            logs: [
+                { timestamp: '2025-06-20 10:00:01.123', level: 'INFO', stockCode: 'N/A', message: 'Verification process started.', timeTaken: 50 },
+                { timestamp: '2025-06-20 10:00:05.456', level: 'DEBUG', stockCode: '1234', message: 'Processing stock 1234 data...', timeTaken: 1200 },
+                { timestamp: '2025-06-20 10:00:06.789', level: 'API', stockCode: '1234', message: 'API request to stock data service. (Response: 800ms)', timeTaken: 800 },
+                { timestamp: '2025-06-20 10:00:07.100', level: 'INFO', stockCode: '1234', message: 'Entry signal detected for 1234.', timeTaken: 10 },
+                { timestamp: '2025-06-20 10:00:08.200', level: 'DEBUG', stockCode: '1235', message: 'Processing stock 1235 data...', timeTaken: 1100 },
+                { timestamp: '2025-06-20 10:00:09.300', level: 'API', stockCode: '1235', message: 'API request to stock data service. (Response: 750ms)', timeTaken: 750 },
+                { timestamp: '2025-06-20 10:00:10.000', level: 'INFO', stockCode: 'N/A', message: 'Verification process completed.', timeTaken: 2000 }
+            ]
+        };
+
+        // DOMContentLoaded イベントで初期化処理を実行
+        document.addEventListener('DOMContentLoaded', () => {
+            // ヘッダー情報の表示
+            document.getElementById('createdAt').textContent = data.planInfo.createdAt;
+            document.getElementById('author').textContent = data.planInfo.author;
+            document.getElementById('name').textContent = data.planInfo.name;
+            document.getElementById('memo').textContent = data.planInfo.memo;
+            document.getElementById('planName').textContent = data.planInfo.planName;
+            
+            const totalProfitBeforeTaxElement = document.getElementById('totalProfitBeforeTax');
+            totalProfitBeforeTaxElement.textContent = `¥${data.planInfo.totalProfitBeforeTax.toLocaleString()}`;
+            applyProfitClass(totalProfitBeforeTaxElement, data.planInfo.totalProfitBeforeTax);
+
+            const totalProfitAfterTaxElement = document.getElementById('totalProfitAfterTax');
+            totalProfitAfterTaxElement.textContent = `¥${data.planInfo.totalProfitAfterTax.toLocaleString()}`;
+            applyProfitClass(totalProfitAfterTaxElement, data.planInfo.totalProfitAfterTax);
+
+            document.getElementById('totalInvestedAmount').textContent = `¥${data.planInfo.totalInvestedAmount.toLocaleString()}`;
+            document.getElementById('totalStocks').textContent = data.planInfo.totalStocks;
+            document.getElementById('averagePerStock').textContent = `¥${data.planInfo.averagePerStock.toLocaleString()}`;
+
+
+            // 銘柄一覧テーブルの生成
+            const stockListBody = document.getElementById('stockListBody');
+            data.stockList.forEach(stock => {
+                const row = stockListBody.insertRow();
+                row.insertCell().textContent = stock.target;
+                row.insertCell().textContent = stock.code;
+                row.insertCell().textContent = stock.name;
+                row.insertCell().textContent = stock.market;
+                row.insertCell().textContent = stock.price.toLocaleString();
+                row.insertCell().textContent = stock.minShares.toLocaleString();
+                row.insertCell().textContent = stock.optimalPurchaseAmount.toLocaleString();
+                row.insertCell().textContent = stock.assets;
+                row.insertCell().textContent = stock.reason;
+            });
+
+            // 取引一覧テーブルの生成
+            const tradeListBody = document.getElementById('tradeListBody');
+            data.tradeList.forEach(trade => {
+                const row = tradeListBody.insertRow();
+                row.insertCell().textContent = trade.startDate;
+                row.insertCell().textContent = trade.stockCode;
+                row.insertCell().textContent = trade.stockName;
+                row.insertCell().textContent = trade.market;
+                row.insertCell().textContent = trade.previewDate;
+                row.insertCell().textContent = trade.previewClose.toLocaleString();
+                row.insertCell().textContent = trade.entryDate;
+                row.insertCell().textContent = trade.entryClose.toLocaleString();
+                row.insertCell().textContent = trade.entryVolume.toLocaleString();
+                row.insertCell().textContent = `¥${trade.entryPrice.toLocaleString()}`;
+                row.insertCell().textContent = trade.exitDate;
+                row.insertCell().textContent = trade.exitClose.toLocaleString();
+                row.insertCell().textContent = trade.exitVolume.toLocaleString();
+                row.insertCell().textContent = `¥${trade.exitPrice.toLocaleString()}`;
+                
+                const profitCell = row.insertCell();
+                profitCell.textContent = `¥${trade.profit.toLocaleString()}`;
+                applyProfitClass(profitCell, trade.profit);
+
+                const profitMarginCell = row.insertCell();
+                profitMarginCell.textContent = `${trade.profitMargin.toFixed(1)}%`;
+                applyProfitClass(profitMarginCell, trade.profitMargin);
+
+                const profitFCell = row.insertCell();
+                profitFCell.textContent = `¥${trade.profitF.toLocaleString()}`;
+                applyProfitClass(profitFCell, trade.profitF);
+
+                const profitMarginFCell = row.insertCell();
+                profitMarginFCell.textContent = `${trade.profitMarginF.toFixed(1)}%`;
+                applyProfitClass(profitMarginFCell, trade.profitMarginF);
+
+                const chartCell = row.insertCell();
+                const chartLink = document.createElement('a');
+                chartLink.href = '#';
+                chartLink.textContent = 'チャート参照';
+                chartLink.onclick = (e) => {
+                    e.preventDefault();
+                    alert(`銘柄 ${trade.stockCode} のチャートに遷移します。`);
+                };
+                chartCell.appendChild(chartLink);
+            });
+
+            // ログ画面の生成
+            const logConsoleContainer = document.getElementById('logConsoleContainer');
+            data.logs.forEach(log => {
+                const p = document.createElement('p');
+                p.textContent = `${log.timestamp} [${log.level}] (${log.stockCode || 'N/A'}) - ${log.message} (Took: ${log.timeTaken}ms)`;
+                logConsoleContainer.appendChild(p);
+            });
+
+            // タブ切り替えロジック
+            const tabButtons = document.querySelectorAll('#analyzeResultTabs .nav-link');
+            const tabPanes = document.querySelectorAll('#analyzeResultTabContent .tab-pane');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // 全てのタブボタンとタブコンテンツから active クラスを削除
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabPanes.forEach(pane => pane.classList.remove('active'));
+
+                    // クリックされたタブボタンをアクティブにする
+                    button.classList.add('active');
+                    
+                    // 対応するタブコンテンツをアクティブにする
+                    const targetId = button.getAttribute('data-tab-target');
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+
+            // 利益・損失に応じてクラスを適用するヘルパー関数
+            function applyProfitClass(element, value) {
+                if (value > 0) {
+                    element.classList.add('text-success');
+                } else if (value < 0) {
+                    element.classList.add('text-danger');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

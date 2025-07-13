@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockCompass - プラン結果分析</title>
+    <style>
+        /* ここに基本的なCSSを記述する場所です。今回は骨組みのみのため含みません。 */
+        body { font-family: sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+        .header { margin-bottom: 20px; }
+        .summary-box { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+        .summary-item strong { display: block; font-size: 1.2em; }
+        .chart-area { border: 1px solid #eee; height: 300px; display: flex; justify-content: center; align-items: center; background-color: #eef; margin-bottom: 20px; }
+        .tabs { display: flex; margin-bottom: -1px; }
+        .tab-button { padding: 10px 15px; border: 1px solid #ccc; border-bottom: none; cursor: pointer; background-color: #e0e0e0; border-top-left-radius: 5px; border-top-right-radius: 5px; }
+        .tab-button.active { background-color: #fff; border-bottom: 1px solid #fff; }
+        .tab-content { border: 1px solid #ccc; padding: 20px; min-height: 400px; background-color: #fff; border-radius: 0 5px 5px 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .button-group { text-align: center; margin-top: 30px; }
+        .button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1.1em; }
+        .button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>StockCompass</h1>
+            <p>&gt; プラン結果分析</p>
+        </header>
+
+        <section class="plan-info">
+            <h2>[ プラン名: 検証プランA (プランID: PL001) ]</h2>
+            <p>検証期間: 2023/01/01 - 2023/12/31</p>
+        </section>
+
+        <hr>
+
+        <section class="summary">
+            <h3>サマリー</h3>
+            <div class="summary-box">
+                <div class="summary-item"><strong>最終損益:</strong> &yen;1,500,000 (+15.0%)</div>
+                <div class="summary-item"><strong>総トレード数:</strong> 120回</div>
+                <div class="summary-item"><strong>勝率:</strong> 65.8%</div>
+                <div class="summary-item"><strong>課税前損益:</strong> &yen;1,800,000</div>
+                <div class="summary-item"><strong>課税後損益:</strong> &yen;1,200,000</div>
+                <div class="summary-item"><strong>プロフィットファクター:</strong> 1.85</div>
+            </div>
+        </section>
+
+        <section class="chart-section">
+            <h3>損益推移グラフ</h3>
+            <div class="chart-area">
+                <p>損益推移グラフのプレースホルダー</p>
+            </div>
+        </section>
+
+        <hr>
+
+        <section class="details">
+            <div class="tabs">
+                <div class="tab-button active" data-tab="plan-info">プラン情報</div>
+                <div class="tab-button" data-tab="transactions">取引一覧</div>
+                <div class="tab-button" data-tab="stocks">銘柄一覧</div>
+                <div class="tab-button" data-tab="logs">ログ</div>
+            </div>
+
+            <div id="plan-info" class="tab-content">
+                <h3>プラン情報</h3>
+                <p><strong>プラン名:</strong> 検証プランA</p>
+                <p><strong>検証期間:</strong> 2023/01/01 - 2023/12/31</p>
+                <p><strong>使用された市場:</strong> 東証プライム</p>
+                <p><strong>エントリー条件:</strong> 5日移動平均線が25日移動平均線をゴールデンクロス後、RSIが30以下</p>
+                <p><strong>エグジット条件:</strong> 株価が購入価格から10%上昇、または5%下落</p>
+                <p><strong>資金管理ルール:</strong> 1トレードあたりのリスクは総資金の1%以内</p>
+                </div>
+
+            <div id="transactions" class="tab-content" style="display:none;">
+                <h3>取引一覧</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>トレードID</th>
+                            <th>銘柄</th>
+                            <th>開始日時</th>
+                            <th>終了日時</th>
+                            <th>課税前損益</th>
+                            <th>課税後損益</th>
+                            <th>課税前利益率</th>
+                            <th>アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>T001</td>
+                            <td>ABC (1234)</td>
+                            <td>2023/01/10 10:00</td>
+                            <td>2023/01/15 14:30</td>
+                            <td>+&yen;50,000</td>
+                            <td>+&yen;40,000</td>
+                            <td>+5.0%</td>
+                            <td><button>チャートへ</button></td>
+                        </tr>
+                        <tr>
+                            <td>T002</td>
+                            <td>XYZ (5678)</td>
+                            <td>2023/02/01 09:30</td>
+                            <td>2023/02/05 11:00</td>
+                            <td>-&yen;20,000</td>
+                            <td>-&yen;20,000</td>
+                            <td>-2.0%</td>
+                            <td><button>チャートへ</button></td>
+                        </tr>
+                        </tbody>
+                </table>
+            </div>
+
+            <div id="stocks" class="tab-content" style="display:none;">
+                <h3>銘柄一覧</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>銘柄</th>
+                            <th>トレース開始</th>
+                            <th>トレース終了</th>
+                            <th>シグナル検知</th>
+                            <th>除外理由</th>
+                            <th>アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>ABC (1234)</td>
+                            <td>2023/01/01</td>
+                            <td>2023/12/31</td>
+                            <td>あり</td>
+                            <td>-</td>
+                            <td><button>チャートへ</button></td>
+                        </tr>
+                        <tr>
+                            <td>DEF (9012)</td>
+                            <td>2023/01/01</td>
+                            <td>2023/12/31</td>
+                            <td>なし</td>
+                            <td>出来高が少ないため除外</td>
+                            <td><button>チャートへ</button></td>
+                        </tr>
+                        <tr>
+                            <td>GHI (3456)</td>
+                            <td>2023/01/01</td>
+                            <td>2023/12/31</td>
+                            <td>なし</td>
+                            <td>エントリーサインが見つからないため除外</td>
+                            <td><button>チャートへ</button></td>
+                        </tr>
+                        </tbody>
+                </table>
+            </div>
+
+            <div id="logs" class="tab-content" style="display:none;">
+                <h3>ログ</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>タイムスタンプ</th>
+                            <th>レベル</th>
+                            <th>メッセージ</th>
+                            <th>処理時間 (ms)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>2023/12/31 10:00:05</td>
+                            <td>INFO</td>
+                            <td>データロード開始</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>2023/12/31 10:00:15</td>
+                            <td>INFO</td>
+                            <td>銘柄分析開始 (ABC)</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>2023/12/31 10:00:18</td>
+                            <td>INFO</td>
+                            <td>エントリーシグナル探知処理時間 (ABC): 500ms</td>
+                            <td>500</td>
+                        </tr>
+                        <tr>
+                            <td>2023/12/31 10:00:20</td>
+                            <td>INFO</td>
+                            <td>APIリクエスト開始 (株価取得)</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>2023/12/31 10:00:25</td>
+                            <td>INFO</td>
+                            <td>API結果受領までの時間: 5000ms</td>
+                            <td>5000</td>
+                        </tr>
+                        <tr>
+                            <td>2023/12/31 10:05:00</td>
+                            <td>INFO</td>
+                            <td>バックテスト計算処理完了</td>
+                            <td>-</td>
+                        </tr>
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="button-group">
+            <button class="button">プラン見直しへ</button>
+        </div>
+    </div>
+
+    <script>
+        // タブ切り替えのJavaScript
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.style.display = 'none');
+
+                    button.classList.add('active');
+                    document.getElementById(button.dataset.tab).style.display = 'block';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

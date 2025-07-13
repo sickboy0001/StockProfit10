@@ -360,6 +360,11 @@ export async function updatePlanDetailsAction(
   }
 }
 
+export interface StockInfo {
+  code: string;
+  name: string;
+}
+
 /**
  * プランに関連するすべての詳細情報を一括で取得するための型定義
  */
@@ -371,6 +376,108 @@ export interface PlanDetailsAll {
   entrySignal: EntrySignal | null;
   exitSignal: ExitSignal | null;
   feeTax: FeeTax | null;
+  stockCodes: StockInfo[] | null; // ★追加：銘柄コードのリスト
+}
+
+/**
+ * 指定されたheader_idに紐づく銘柄情報（コードと名称）のリストを取得します。
+ * @param headerId sptch_stock_selections_headerのID
+ * @returns 銘柄情報の配列、またはエラーメッセージ
+ */
+
+export async function getStockInfoByHeaderId(
+  headerId: number
+): Promise<{ data: StockInfo[] | null; error: string | null }> {
+  if (!headerId) {
+    return { data: null, error: "ヘッダーIDが必要です。" };
+  }
+  const supabase = await createClient();
+  try {
+    // 1. sptch_stock_selections_stocks から銘柄コードのみを取得
+    const { data: selectionStocks, error: selectionError } = await supabase
+      .from("sptch_stock_selections_stocks")
+      .select("stock_code, order_no") // order_noも取得して後で並び替えに利用
+      .eq("header_id", headerId)
+      .order("order_no", { ascending: true }); // まずは選択順に取得
+
+    if (selectionError) {
+      return {
+        data: null,
+        error: `選択銘柄コードの取得に失敗しました: ${selectionError.message}`,
+      };
+    }
+
+    if (!selectionStocks || selectionStocks.length === 0) {
+      return { data: [], error: null }; // 選択された銘柄がない場合
+    }
+
+    const stockCodes = selectionStocks.map((item) => item.stock_code);
+
+    // 2. 取得した銘柄コードのリストを使って spt_stocks から銘柄名を取得
+    const { data: stocksData, error: stocksError } = await supabase
+      .from("spt_stocks")
+      .select("code, name")
+      .in("code", stockCodes); // 複数のコードを一括で指定
+
+    if (stocksError) {
+      return {
+        data: null,
+        error: `銘柄詳細情報の取得に失敗しました: ${stocksError.message}`,
+      };
+    }
+
+    // 3. 取得した銘柄コードと銘柄名を結合し、StockInfo[] の形式に整形
+    // 選択順を保持するために、selectionStocksの順序を利用
+    const stockMap = new Map<string, string>();
+    stocksData.forEach((stock) => {
+      stockMap.set(stock.code, stock.name);
+    });
+
+    const stockInfoList: StockInfo[] = selectionStocks.map((selection) => ({
+      code: selection.stock_code,
+      name: stockMap.get(selection.stock_code) || "Unknown Name", // 銘柄名が見つからない場合のフォールバック
+    }));
+
+    return { data: stockInfoList, error: null };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "予期せぬエラーが発生しました。";
+    return { data: null, error: message };
+  }
+}
+
+/**
+ * 指定されたheader_idに紐づく銘柄コードのリストを取得します。
+ * @param headerId sptch_stock_selections_headerのID
+ * @returns 銘柄コードの配列、またはエラーメッセージ
+ */
+export async function getStockCodesByHeaderId(
+  headerId: number
+): Promise<{ data: string[] | null; error: string | null }> {
+  if (!headerId) {
+    return { data: null, error: "ヘッダーIDが必要です。" };
+  }
+  const supabase = await createClient();
+  try {
+    const { data, error } = await supabase
+      .from("sptch_stock_selections_stocks")
+      .select("stock_code")
+      .eq("header_id", headerId)
+      .order("order_no", { ascending: true }); // 必要に応じて並び順を指定
+
+    if (error) {
+      return {
+        data: null,
+        error: `銘柄コードの取得に失敗しました: ${error.message}`,
+      };
+    }
+    const stockCodes = data.map((item) => item.stock_code);
+    return { data: stockCodes, error: null };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "予期せぬエラーが発生しました。";
+    return { data: null, error: message };
+  }
 }
 
 /**
@@ -392,16 +499,19 @@ export async function getPlanDetailsAll(
   const plan = planResult.data;
 
   // 2. 関連情報を並行して取得
+  // 2. 関連情報を並行して取得
   const [
     simulationPeriodResult,
     tradeParameterResult,
     signalResult,
     feeTaxResult,
+    stockInfoListResult, // ★追加：銘柄コードの取得
   ] = await Promise.all([
     getSimulationPeriodAction(plan.simulation_period_id),
     getTradeParameterAction(plan.trade_parameter_id),
     getSignalAction(plan.signal_id),
     getFeeTaxAction(plan.fee_tax_id),
+    getStockInfoByHeaderId(plan.stock_selection_header_id), // ★追加
   ]);
 
   // エラーチェック
@@ -443,7 +553,10 @@ export async function getPlanDetailsAll(
       error: `シグナル詳細の取得に失敗: ${signalDetailErrors.join(", ")}`,
     };
   }
-
+  // console.log(
+  //   "planactioncalled.stockCodesResult.data",
+  //   stockInfoListResult.data
+  // );
   // 4. すべてのデータを一つのオブジェクトにまとめる
   const responseData: PlanDetailsAll = {
     plan,
@@ -453,6 +566,7 @@ export async function getPlanDetailsAll(
     entrySignal: entrySignalResult.data,
     exitSignal: exitSignalResult.data,
     feeTax: feeTaxResult.data,
+    stockCodes: stockInfoListResult.data, // ★追加
   };
 
   return { data: responseData, error: null };

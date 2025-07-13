@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 import React, { useEffect, useState } from "react";
 // shadcn/ui のコンポーネントのインポートを想定
 // 実際のプロジェクトでは、これらをインストールし、components/ui に配置しているはずです
@@ -12,11 +14,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getPlanDetailsAll,
   PlanDetailsAll,
 } from "@/app/actions/Compass/PlanActions";
+import { initiateSimulationAction } from "@/app/actions/Compass/SimulationActions";
+import SignDisp from "@/components/domain/Compass/SignDisp";
 
 interface GeneratePlanResultProps {
   id: string;
@@ -25,9 +34,13 @@ interface GeneratePlanResultProps {
 export default function GeneratePlanResult(props: GeneratePlanResultProps) {
   const { id } = props;
   const [planData, setPlanData] = useState<PlanDetailsAll | null>(null);
+  const [isStockListExpanded, setIsStockListExpanded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   // フォーム送信ハンドラ
   const { user } = useAuth();
-  console.log("called GeneratePlanResult", id);
+  // console.log("called GeneratePlanResult", id);
   useEffect(() => {
     const fetch = async () => {
       const result = await getPlanDetailsAll(Number(id));
@@ -38,215 +51,35 @@ export default function GeneratePlanResult(props: GeneratePlanResultProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // setIsSubmitting(true);
+    setIsSubmitting(true);
+    setError(null);
 
-    // if (!user?.id) {
-    //   return;
-    // }
+    try {
+      const result = await initiateSimulationAction(Number(id));
 
-    // // クライアントサイドでの簡易バリデーション
-    // if (!startDate || !endDate) {
-    //   showCustomToast({
-    //     message: "入力エラー",
-    //     submessage: "シミュレーション期間を選択してください。",
-    //     type: "error",
-    //   });
-    //   setIsSubmitting(false);
-    //   return;
-    // }
-    // if (stockCodes.length === 0) {
-    //   showCustomToast({
-    //     message: "入力エラー",
-    //     submessage:
-    //       "銘柄コードを入力するか、ポートフォリオから選択してください。",
-    //     type: "error",
-    //   });
-    //   setIsSubmitting(false);
-    //   return;
-    // }
-    // if (startDate && endDate && startDate > endDate) {
-    //   showCustomToast({
-    //     message: "入力エラー",
-    //     submessage: "開始日は終了日より前の日付を選択してください。",
-    //     type: "error",
-    //   });
-    //   setIsSubmitting(false);
-    //   return;
-    // }
-
-    // // 入口サイン条件が設定されていない場合のバリデーション
-    // if (entryConditions.length === 0) {
-    //   showCustomToast({
-    //     message: "入力エラー",
-    //     submessage: "入口サイン条件を少なくとも1つ追加してください。",
-    //     type: "error",
-    //   });
-    //   setIsSubmitting(false);
-    //   return;
-    // }
-
-    // // 基本的な数値入力のバリデーション
-    // const baseNumberInputs = {
-    //   maxPurchaseAmount,
-    //   minVolume,
-    //   tradeUnit,
-    //   buyFeeRate,
-    //   sellFeeRate,
-    //   taxRate,
-    //   baseExitDays,
-    //   baseExitProfitPercent,
-    //   baseExitStopLossPercent,
-    // };
-    // let hasError = false;
-    // for (const [key, value] of Object.entries(baseNumberInputs)) {
-    //   if (isNaN(value as number) || (value as number) < 0) {
-    //     showCustomToast({
-    //       message: "入力エラー",
-    //       submessage: `${key} は有効な数値を入力してください。`,
-    //       type: "error",
-    //     });
-    //     hasError = true;
-    //     break;
-    //   }
-    // }
-    // if (hasError) {
-    //   setIsSubmitting(false);
-    //   return;
-    // }
-
-    // // Helper to flatten conditions for backend submission
-    // const formatConditionForBackend = (
-    //   condition: DisplayableEntryCondition | DisplayableExitCondition
-    //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // ): any => {
-    //   if ("isGroup" in condition && condition.isGroup) {
-    //     return {
-    //       type: "group",
-    //       logic: condition.logic,
-    //       conditions: condition.conditions.map(formatConditionForBackend),
-    //     };
-    //   } else {
-    //     // idとlabelはバックエンドに送信しないため、未使用でもESLintエラーを抑制
-    //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    //     const { id, label, ...rest } = condition;
-    //     return rest;
-    //   }
-    // };
-
-    // try {
-    //   // 必須出口条件をオブジェクトとして構築
-    //   const fixedExitConditionsBackend: SimpleExitCondition[] = [
-    //     {
-    //       id: "fixed_exit_days_backend",
-    //       type: "fixedDays",
-    //       days: baseExitDays,
-    //       label: `固定: ${baseExitDays}日経過で決済`,
-    //     },
-    //     {
-    //       id: "fixed_exit_profit_backend",
-    //       type: "profitTarget",
-    //       percent: baseExitProfitPercent,
-    //       label: `固定: ${baseExitProfitPercent}%利益で決済`,
-    //     },
-    //     {
-    //       id: "fixed_exit_stop_loss_backend",
-    //       type: "stopLoss",
-    //       percent: baseExitStopLossPercent,
-    //       label: `固定: ${baseExitStopLossPercent}%損切りで決済`,
-    //     },
-    //   ];
-
-    //   // 全ての出口条件を結合 (必須条件は常にORロジックで結合される想定)
-    //   // バックエンド側でこのリストが評価される
-    //   const allExitConditionsForBackend = [
-    //     ...fixedExitConditionsBackend,
-    //     ...optionalExitConditions,
-    //   ];
-
-    //   // Server Actionの呼び出しのためのパラメータ構築
-    //   const formattedEntryConditions = entryConditions.map(
-    //     formatConditionForBackend
-    //   );
-    //   const formattedExitConditions = allExitConditionsForBackend.map(
-    //     formatConditionForBackend
-    //   ); // New
-
-    //   const simulationParams: ISimulationRequestParams = {
-    //     name: "",
-    //     memo: "",
-    //     userId: user?.id,
-    //     stockSelection: {
-    //       name: "",
-    //       memo: "",
-    //       stockCodes: stockCodes,
-    //     },
-    //     simulationPeriod: {
-    //       name: "",
-    //       memo: "",
-    //       startDate: format(startDate, "yyyy-MM-dd"),
-    //       endDate: format(endDate, "yyyy-MM-dd"),
-    //     },
-    //     tradeFilter: {
-    //       name: "",
-    //       memo: "",
-    //       maxPurchaseAmount,
-    //       minVolume,
-    //       tradeUnit,
-    //     },
-
-    //     signs: {
-    //       name: "",
-    //       memo: "",
-    //       transactionType: transactionType,
-    //       entry_name: "",
-    //       entry_memo: "",
-    //       entry: {
-    //         entryConditions: formattedEntryConditions,
-    //         globalEntryConditionLogic,
-    //       },
-    //       exit_name: "",
-    //       exit_memo: "",
-    //       exit: {
-    //         exitConditions: formattedExitConditions,
-    //       },
-    //     },
-    //     feeTax: {
-    //       name: "",
-    //       memo: "",
-    //       buyFeeRate: buyFeeRate / 100,
-    //       sellFeeRate: sellFeeRate / 100,
-    //       taxRate: taxRate / 100,
-    //     },
-    //   };
-    //   setSimulationParams(simulationParams);
-
-    //   const result = await registPlan(simulationParams);
-
-    //   if (result.error) {
-    //     showCustomToast({
-    //       message: "シミュレーションエラー",
-    //       submessage: result.error,
-    //       type: "error",
-    //     });
-    //   } else if (result.simulationId) {
-    //     showCustomToast({
-    //       message: "シミュレーション成功",
-    //       submessage: `シミュレーションID: ${result.simulationId}`,
-    //       type: "success",
-    //     });
-    //     console.log(`シミュレーションID: ${result.simulationId}`);
-    //   }
-    // } catch (error) {
-    //   console.error("シミュレーション実行中にエラーが発生しました:", error);
-    //   showCustomToast({
-    //     message: "システムエラー",
-    //     submessage: "シミュレーションの実行中に予期せぬエラーが発生しました。",
-    //     type: "error",
-    //   });
-    // } finally {
-    //   setIsSubmitting(false);
-    // }
+      if (result.success && result.simulationResultId) {
+        // 成功した場合、新しく作成されたシミュレーション結果ページにリダイレクトします
+        router.push(`/Compass/Results/${Number(id)}`);
+      } else {
+        // 失敗した場合、エラーメッセージを表示します
+        setError(result.error || "不明なエラーが発生しました。");
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "クライアント側で予期せぬエラーが発生しました。";
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // 銘柄リストを分割して表示を制御
+  const stocks = planData?.stockCodes ?? [];
+  const visibleStocks = stocks.slice(0, 10);
+  const hiddenStocks = stocks.slice(10);
+  const hasHiddenStocks = hiddenStocks.length > 0;
 
   return (
     <>
@@ -262,6 +95,22 @@ export default function GeneratePlanResult(props: GeneratePlanResultProps) {
           </CardHeader>
           <CardContent className="p-6 space-y-8">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* シミュレーション期間 */}
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                  シミュレーション期間
+                </h3>
+                <p className="text-base text-gray-800 bg-gray-100 p-3 rounded-md">
+                  <span className="font-medium">
+                    {planData?.simulationPeriod?.start_date ?? "未設定"}
+                  </span>
+                  <span className="mx-2 text-gray-500">～</span>
+                  <span className="font-medium">
+                    {planData?.simulationPeriod?.end_date ?? "未設定"}
+                  </span>
+                </p>
+              </div>
+
               {/* 銘柄選択 */}
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2">
@@ -273,44 +122,57 @@ export default function GeneratePlanResult(props: GeneratePlanResultProps) {
                       htmlFor="stock-codes"
                       className="text-gray-700 text-sm"
                     >
-                      銘柄コード（カンマ区切りで複数選択可能）
+                      対象銘柄
                     </Label>
-                    {/* <Input
-                      id="stock-codes"
-                      placeholder="例: 7203, 9984"
-                      value={stockCodes.join(", ")}
-                      onChange={(e) => {
-                        const codes = e.target.value
-                          .split(",")
-                          .map((code) => code.trim())
-                          .filter((code) => code);
-                        setStockCodes(codes);
-                        // ユーザーが手動で編集した場合、ポートフォリオの選択状態を解除
-                        setPortfolioId("");
-                      }}
-                      type="text"
-                      className="rounded-md mt-1"
-                    /> */}
+                    <div className="mt-1 space-y-2 rounded-md border p-2 bg-gray-50 max-h-48 overflow-y-auto">
+                      {visibleStocks.map((stock) => (
+                        <div
+                          key={stock.code}
+                          className="flex items-center text-sm p-1"
+                        >
+                          <span className="font-mono bg-gray-200 text-gray-700 rounded px-2 py-1 text-xs mr-2">
+                            {stock.code}
+                          </span>
+                          <span className="text-gray-800">{stock.name}</span>
+                        </div>
+                      ))}
+                      {hasHiddenStocks && (
+                        <Collapsible
+                          open={isStockListExpanded}
+                          onOpenChange={setIsStockListExpanded}
+                          className="w-full"
+                        >
+                          <CollapsibleContent className="space-y-1 animate-in slide-in-from-top-2">
+                            {hiddenStocks.map((stock) => (
+                              <div
+                                key={stock.code}
+                                className="flex items-center text-sm p-1"
+                              >
+                                <span className="font-mono bg-gray-200 text-gray-700 rounded px-2 py-1 text-xs mr-2">
+                                  {stock.code}
+                                </span>
+                                <span className="text-gray-800">
+                                  {stock.name}
+                                </span>
+                              </div>
+                            ))}
+                          </CollapsibleContent>
+                          <CollapsibleTrigger asChild>
+                            <button className="flex items-center justify-center w-full text-sm text-blue-600 hover:text-blue-800 p-1 mt-1 rounded-md hover:bg-gray-100 transition-colors">
+                              {isStockListExpanded
+                                ? "閉じる"
+                                : `残り${hiddenStocks.length}件を表示`}
+                              <ChevronDown
+                                className={`ml-1 h-4 w-4 transition-transform duration-200 ${
+                                  isStockListExpanded ? "rotate-180" : ""
+                                }`}
+                              />
+                            </button>
+                          </CollapsibleTrigger>
+                        </Collapsible>
+                      )}
+                    </div>
                   </div>
-                  {/* <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowPortfolioSelectionModal(true)}
-                    className="whitespace-nowrap"
-                  >
-                    ポートフォリオから選択
-                  </Button> */}
-                </div>
-              </div>
-
-              {/* シミュレーション期間 */}
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2">
-                  シミュレーション期間
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <label>{planData?.simulationPeriod?.start_date}</label>-
-                  <label>{planData?.simulationPeriod?.end_date}</label>
                 </div>
               </div>
 
@@ -319,29 +181,40 @@ export default function GeneratePlanResult(props: GeneratePlanResultProps) {
                 <h3 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2">
                   取引前提・条件フィルタリング
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <Label
-                      htmlFor="max-purchase-amount"
-                      className="text-gray-700"
-                    >
-                      購入金額上限 (円)
-                    </Label>
-                    <label>
-                      {planData?.tradeParameter?.max_purchase_amount}円
-                    </label>
+                    <Label className="text-gray-700">購入金額上限 (円)</Label>
+                    <p className="mt-1 rounded-md bg-gray-100 p-2 text-base font-medium text-gray-900">
+                      {planData?.tradeParameter?.max_purchase_amount?.toLocaleString(
+                        "ja-JP"
+                      ) ?? "未設定"}
+                      {planData?.tradeParameter?.max_purchase_amount !=
+                        null && (
+                        <span className="ml-1 text-sm text-gray-600">円</span>
+                      )}
+                    </p>
                   </div>
                   <div>
-                    <Label htmlFor="min-volume" className="text-gray-700">
-                      出来高下限 (株)
-                    </Label>
-                    <label>{planData?.tradeParameter?.min_volume}円</label>
+                    <Label className="text-gray-700">出来高下限 (株)</Label>
+                    <p className="mt-1 rounded-md bg-gray-100 p-2 text-base font-medium text-gray-900">
+                      {planData?.tradeParameter?.min_volume?.toLocaleString(
+                        "ja-JP"
+                      ) ?? "未設定"}
+                      {planData?.tradeParameter?.min_volume != null && (
+                        <span className="ml-1 text-sm text-gray-600">株</span>
+                      )}
+                    </p>
                   </div>
                   <div>
-                    <Label htmlFor="trade-unit" className="text-gray-700">
-                      取引単位 (株)
-                    </Label>
-                    <label>{planData?.tradeParameter?.trade_unit}円</label>
+                    <Label className="text-gray-700">取引単位 (株)</Label>
+                    <p className="mt-1 rounded-md bg-gray-100 p-2 text-base font-medium text-gray-900">
+                      {planData?.tradeParameter?.trade_unit?.toLocaleString(
+                        "ja-JP"
+                      ) ?? "未設定"}
+                      {planData?.tradeParameter?.trade_unit != null && (
+                        <span className="ml-1 text-sm text-gray-600">株</span>
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -352,13 +225,11 @@ export default function GeneratePlanResult(props: GeneratePlanResultProps) {
                   取引タイプ
                 </h3>
                 <div>
-                  <Label
-                    htmlFor="transaction-type-select"
-                    className="text-gray-700"
-                  >
-                    取引方向を選択
-                  </Label>
-                  <Label>{planData?.signal?.transaction_type}</Label>
+                  <div>
+                    <p className="mt-1 rounded-md bg-gray-100 p-2 text-base font-medium text-gray-900">
+                      {planData?.signal?.transaction_type}{" "}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -367,6 +238,12 @@ export default function GeneratePlanResult(props: GeneratePlanResultProps) {
                 <h3 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2 flex justify-between items-center">
                   入口サイン条件
                 </h3>
+                <SignDisp
+                  conditionsJson={
+                    planData?.entrySignal?.conditions_json || null
+                  }
+                  signalType="entry"
+                />
               </div>
 
               {/* 出口サイン条件 (複数対応 & グループ対応 - New Section) */}
@@ -374,75 +251,10 @@ export default function GeneratePlanResult(props: GeneratePlanResultProps) {
                 <h3 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2 flex justify-between items-center">
                   出口サイン条件
                 </h3>
-
-                {/* 必須出口条件 */}
-                <div className="space-y-4 p-4 border border-purple-300 rounded-md bg-purple-50">
-                  <p className="text-md font-semibold text-purple-800">
-                    必須条件 (常に適用される基本の決済ルール)
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="base-exit-days" className="text-gray-700">
-                        経過日数で決済 (日)
-                      </Label>
-                      {/* <Input
-                        id="base-exit-days"
-                        type="number"
-                        value={baseExitDays}
-                        onChange={(e) =>
-                          setBaseExitDays(Number(e.target.value))
-                        }
-                        min="0"
-                        className="rounded-md bg-white"
-                      /> */}
-                    </div>
-                    <div>
-                      <Label
-                        htmlFor="base-exit-profit-percent"
-                        className="text-gray-700"
-                      >
-                        利益率で決済 (%)
-                      </Label>
-                      {/* <Input
-                        id="base-exit-profit-percent"
-                        type="number"
-                        value={baseExitProfitPercent}
-                        onChange={(e) =>
-                          setBaseExitProfitPercent(Number(e.target.value))
-                        }
-                        step="0.1"
-                        min="0"
-                        className="rounded-md bg-white"
-                      /> */}
-                    </div>
-                    <div>
-                      <Label
-                        htmlFor="base-exit-stop-loss-percent"
-                        className="text-gray-700"
-                      >
-                        損切り率で決済 (%)
-                      </Label>
-                      {/* <Input
-                        id="base-exit-stop-loss-percent"
-                        type="number"
-                        value={baseExitStopLossPercent}
-                        onChange={(e) =>
-                          setBaseExitStopLossPercent(Number(e.target.value))
-                        }
-                        step="0.1"
-                        min="0"
-                        className="rounded-md bg-white"
-                      /> */}
-                    </div>
-                  </div>
-                </div>
-
-                {/* その他の追加オプション出口条件 */}
-                <div className="space-y-2 mt-6">
-                  <h4 className="text-lg font-semibold text-gray-800 flex justify-between items-center">
-                    追加出口条件 (オプション)
-                  </h4>
-                </div>
+                <SignDisp
+                  conditionsJson={planData?.exitSignal?.conditions_json || null}
+                  signalType="exit"
+                />
               </div>
 
               {/* 手数料・税率 */}
@@ -450,24 +262,39 @@ export default function GeneratePlanResult(props: GeneratePlanResultProps) {
                 <h3 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2">
                   手数料・税率
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="buy-fee-rate" className="text-gray-700">
-                      購入時手数料率 (%)
-                    </Label>
-                    <label>{planData?.feeTax?.buy_fee_rate}%</label>
+                    <Label className="text-gray-700">購入時手数料率 (%)</Label>
+                    <p className="mt-1 rounded-md bg-gray-100 p-2 text-base font-medium text-gray-900">
+                      {planData?.feeTax?.buy_fee_rate != null
+                        ? planData.feeTax.buy_fee_rate * 100
+                        : "未設定"}
+                      {planData?.feeTax?.buy_fee_rate != null && (
+                        <span className="ml-1 text-sm text-gray-600">%</span>
+                      )}
+                    </p>
                   </div>
                   <div>
-                    <Label htmlFor="sell-fee-rate" className="text-gray-700">
-                      売却時手数料率 (%)
-                    </Label>
-                    <label>{planData?.feeTax?.sell_fee_rate}%</label>
+                    <Label className="text-gray-700">売却時手数料率 (%)</Label>
+                    <p className="mt-1 rounded-md bg-gray-100 p-2 text-base font-medium text-gray-900">
+                      {planData?.feeTax?.sell_fee_rate != null
+                        ? planData.feeTax.sell_fee_rate * 100
+                        : "未設定"}
+                      {planData?.feeTax?.sell_fee_rate != null && (
+                        <span className="ml-1 text-sm text-gray-600">%</span>
+                      )}
+                    </p>
                   </div>
                   <div>
-                    <Label htmlFor="tax-rate" className="text-gray-700">
-                      税率 (%)
-                    </Label>
-                    <label>{planData?.feeTax?.tax_rate}%</label>
+                    <Label className="text-gray-700">税率 (%)</Label>
+                    <p className="mt-1 rounded-md bg-gray-100 p-2 text-base font-medium text-gray-900">
+                      {planData?.feeTax?.tax_rate != null
+                        ? planData.feeTax.tax_rate * 100
+                        : "未設定"}
+                      {planData?.feeTax?.tax_rate != null && (
+                        <span className="ml-1 text-sm text-gray-600">%</span>
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -476,9 +303,9 @@ export default function GeneratePlanResult(props: GeneratePlanResultProps) {
               <Button
                 type="submit"
                 className="w-full py-3 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-all duration-300 transform hover:scale-105"
-                // disabled={isSubmitting}
+                disabled={isSubmitting || !planData}
               >
-                {/* {isSubmitting ? (
+                {isSubmitting ? (
                   <span className="flex items-center justify-center">
                     <svg
                       className="animate-spin h-5 w-5 mr-3 text-white"
@@ -498,24 +325,20 @@ export default function GeneratePlanResult(props: GeneratePlanResultProps) {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    プラン作成中...
+                    シミュレーション開始中...
                   </span>
                 ) : (
-                  "プラン作成"
-                )} */}
-                シミュレーション実施
+                  "シミュレーション実施"
+                )}
               </Button>
             </form>
-            {/* {simulationParams && (
-              <div className="mt-8 p-4 border border-gray-300 rounded-md bg-gray-50">
-                <h4 className="text-lg font-semibold text-gray-700 mb-2">
-                  送信されるパラメータ (JSON)
-                </h4>
-                <pre className="text-xs bg-white p-3 rounded-md overflow-x-auto">
-                  <code>{JSON.stringify(simulationParams, null, 2)}</code>
-                </pre>
+            {error && (
+              <div className="mt-4 p-3 border border-red-300 bg-red-50 text-red-700 rounded-md text-sm">
+                <p>
+                  <strong>エラー:</strong> {error}
+                </p>
               </div>
-            )} */}
+            )}
           </CardContent>
         </Card>
       </div>

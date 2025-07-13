@@ -1,12 +1,13 @@
 // src/components/domain/Stock/api/stockApi.ts
 import { useQuery } from "@tanstack/react-query";
 import { DailyQuote } from "@/types/stock";
-import { getDailyQuotes } from "@/app/actions/stock";
-import {
-  readAndRegistStockInfo,
-  ReadAndRegistStockInfoResult,
-} from "@/app/actions/readAndRegistStockInfo";
+
 import { useEffect, useState } from "react";
+import {
+  readAndRegistCompanyDailyQuotesEntry,
+  ReadAndRegistCompanyDailyQuotesEntryResultResult,
+} from "@/app/actions/readAndRegistEntry";
+import { getDailyQuotes } from "@/app/actions/readAndRegistStockCompanyDetails";
 
 interface UseStockQuotesOptions {
   stockCode: string;
@@ -28,7 +29,9 @@ export const useStockQuotes = ({
 
   // readAndRegistStockInfo の結果を保持する state
   const [registrationResult, setRegistrationResult] = useState<
-    Partial<ReadAndRegistStockInfoResult> & { actionError?: string | null }
+    Partial<ReadAndRegistCompanyDailyQuotesEntryResultResult> & {
+      actionError?: string | null;
+    }
   >({
     successMessages: [],
     errorMessages: [],
@@ -52,7 +55,7 @@ export const useStockQuotes = ({
         }); // 呼び出し前にリセット
         try {
           // ★ サーバーアクションを呼び出し
-          const result = await readAndRegistStockInfo(
+          const result = await readAndRegistCompanyDailyQuotesEntry(
             processedStockCode,
             startDate,
             endDate

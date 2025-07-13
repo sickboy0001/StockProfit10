@@ -2,10 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  fetchRecentViewedStockCodes,
-  RecentViewedStockInfo,
-} from "@/app/actions/stock";
+
 import { Label } from "@/components/ui/label";
 import {
   Collapsible,
@@ -13,6 +10,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"; // ★ Collapsibleコンポーネントをインポート
 import { ChevronDown, ChevronUp } from "lucide-react"; // ★ アイコンをインポート
+import {
+  fetchRecentViewedStockCodes,
+  RecentViewedStockInfo,
+} from "@/app/actions/readAndRegistStockCompanyDetails";
 
 interface StockChartViewHistoryProps {
   userId: string | undefined;

@@ -1,7 +1,13 @@
-import PageStrocksViewHistory from "@/components/domain/Management/PageStrocksViewHistory";
+import PagePlanResult from "@/components/domain/Compass/PagePlanResult";
 import React from "react"; // Reactをインポート
 
-export default function Home() {
+interface ResultProps {
+  params: Promise<{ id: string }>;
+  // params: { portfolio_id: string };
+}
+
+export default async function Home({ params }: ResultProps) {
+  const { id } = await params;
   return (
     <div>
       <main>
@@ -11,7 +17,7 @@ export default function Home() {
             <p className="text-center p-4">ページを読み込んでいます...</p>
           }
         >
-          <PageStrocksViewHistory />
+          <PagePlanResult id={id} />
         </React.Suspense>
       </main>
     </div>

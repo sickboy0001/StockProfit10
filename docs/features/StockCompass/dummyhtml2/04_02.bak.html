@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>プラン結果分析</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background-color: #f8f8f8;
+      color: #333;
+    }
+
+    h1, h2, h3 {
+      margin-top: 1.5em;
+      color: #2c3e50;
+    }
+
+    .section {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 6px;
+      box-shadow: 0 0 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .tabs {
+      display: flex;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #ccc;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      margin-right: 5px;
+      cursor: pointer;
+      background: #eee;
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
+    }
+
+    .tab.active {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-bottom: none;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #eaeaea;
+    }
+
+    .chart-link {
+      color: blue;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<h1>📊 プラン結果分析</h1>
+
+<div class="section">
+  <h2>📝 プラン情報</h2>
+  <p><strong>作成日時:</strong> 2025-01-01 12:00</p>
+  <p><strong>作成者:</strong> admin</p>
+  <p><strong>プラン名:</strong> 成長株スクリーニング</p>
+  <p><strong>メモ:</strong> 14日間でのトレンド分析</p>
+</div>
+
+<div class="section">
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('trade')">取引一覧</div>
+    <div class="tab" onclick="showTab('stock')">銘柄一覧</div>
+    <div class="tab" onclick="showTab('log')">ログ情報</div>
+    <div class="tab" onclick="showTab('graph')">損益グラフ</div>
+  </div>
+
+  <div id="trade" class="tab-content active">
+    <h3>取引一覧</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>起点日</th><th>銘柄</th><th>名前</th><th>市場</th>
+          <th>ENTRY日</th><th>株価</th><th>株数</th><th>ENTRY額</th>
+          <th>EXIT日</th><th>株価</th><th>株数</th><th>EXIT額</th>
+          <th>損益</th><th>損益率</th><th>税後損益</th><th>税後率</th>
+          <th>チャート</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2025-01-10</td><td>1234</td><td>xxx商事</td><td>東証</td>
+          <td>2025-01-10</td><td>1,240</td><td>200</td><td>248,000</td>
+          <td>2025-01-15</td><td>1,300</td><td>200</td><td>260,000</td>
+          <td>12,000</td><td>5%</td><td>12,000</td><td>4%</td>
+          <td><span class="chart-link">チャート参照</span></td>
+        </tr>
+        <!-- 他の行も追加可能 -->
+      </tbody>
+    </table>
+  </div>
+
+  <div id="stock" class="tab-content">
+    <h3>銘柄一覧</h3>
+    <p>各銘柄のフィルタ状況やトレース開始/終了、はじかれた理由などを表示。</p>
+  </div>
+
+  <div id="log" class="tab-content">
+    <h3>ログ情報</h3>
+    <p>処理時間、API応答時間、各銘柄ごとの処理ログなどを記録。</p>
+  </div>
+
+  <div id="graph" class="tab-content">
+    <h3>損益グラフ</h3>
+    <p>損益推移のグラフ（別途JavaScript描画）。</p>
+    <canvas id="profitChart" width="600" height="200"></canvas>
+  </div>
+</div>
+
+<script>
+  function showTab(tabId) {
+    const tabs = document.querySelectorAll('.tab');
+    const contents = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => tab.classList.remove('active'));
+    contents.forEach(content => content.classList.remove('active'));
+
+    document.querySelector(`#${tabId}`).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  // 簡易グラフ描画（棒グラフ例）
+  window.onload = function () {
+    const canvas = document.getElementById("profitChart");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const data = [0, 2000, 5000, 9000, 12000];
+    const barWidth = 40;
+    const spacing = 20;
+
+    ctx.fillStyle = "green";
+    data.forEach((val, i) => {
+      ctx.fillRect(i * (barWidth + spacing), 200 - val / 100, barWidth, val / 100);
+    });
+  };
+</script>
+
+</body>
+</html>

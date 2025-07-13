@@ -9,6 +9,7 @@ import { DailyQuote } from "@/types/stock";
 import { createClient } from "@/util/supabase/server";
 import { StockDetails } from "@/types/stock"; // 既存の型をインポート
 import moji from "moji";
+import { readAndRegistCompanyStockDetail } from "./readAndRegistCompanyStockDetail";
 /**
  * Yahoo Finance APIから株価データを取得し、整形して返すサーバーアクション
  * @param symbol 銘柄コード
@@ -22,9 +23,9 @@ export async function getAndParseStockData(
   endDate: string
 ): Promise<{ data?: yahooDailyQuote[]; error?: string }> {
   const yahooSymbol = symbol.includes(".") ? symbol : `${symbol}.T`; // .T 以外にも .L などがあるため、より汎用的に
-  console.log(
-    `[getAndParseStockData] Fetching company info for: ${yahooSymbol} using yahoo-finance2`
-  );
+  // console.log(
+  //   `[getAndParseStockData] Fetching company info for: ${yahooSymbol} using yahoo-finance2`
+  // );
 
   try {
     const apiResponse = await fetchStockData(yahooSymbol, startDate, endDate);
@@ -308,12 +309,14 @@ export async function fetchRecentViewedStockCodes(
  * @param stockCode 銘柄コード
  * @returns StockDetailsFromDB | null またはエラーメッセージ
  */
-export async function fetchStockDetailsFromDB(
+export async function readAndRegistStockCompanyDetails(
   stockCode: string
-): Promise<{ data: StockDetails | null; error: string | null }> {
+): Promise<{
+  data: StockDetails | null;
+  error: string | null;
+}> {
   "use server";
   const supabase = await createClient();
-
   if (!stockCode) {
     return { data: null, error: "銘柄コードは必須です。" };
   }
@@ -341,7 +344,21 @@ export async function fetchStockDetailsFromDB(
         error: `データベースからの銘柄詳細の取得に失敗しました: ${error.message}`,
       };
     }
-    return { data, error: null };
+
+    // 企業詳細情報を取得 (既存の別アクションを呼び出し)
+    const companyDetailData = await readAndRegistCompanyStockDetail(stockCode);
+
+    // ２つの情報をマージして返す
+    // ※事前に `StockDetails` 型に `company_detail` プロパティを追加しておく必要があります
+    const mergedData: StockDetails = {
+      ...data,
+      company_detail: companyDetailData,
+    };
+
+    return {
+      data: mergedData,
+      error: null,
+    };
   } catch (err) {
     console.error("Unexpected error fetching stock details from DB:", err);
     const errorMessage =
@@ -427,6 +444,50 @@ export async function searchStocksByName(
     return {
       success: false,
       error: errorMessage,
+    };
+  }
+}
+
+/**
+ * 指定された銘柄の株価データがDBに存在する期間（最小日付と最大日付）を取得します。
+ * @param stockCode 銘柄コード
+ * @returns { min_date: string | null; max_date: string | null; error: string | null }
+ */
+export async function getDbQuotePeriod(stockCode: string): Promise<{
+  min_date: string | null;
+  max_date: string | null;
+  error: string | null;
+}> {
+  const supabase = await createClient();
+  try {
+    // ここで戻り値の型を明示的に指定
+    const { data, error } = await supabase
+      .rpc("get_daily_quote_period", { p_stock_code: stockCode })
+      .single<{ min_date: string | null; max_date: string | null }>(); // ★この行を追加または変更
+
+    if (error) {
+      if (error.code === "PGRST116" || error.code === "42P01") {
+        return { min_date: null, max_date: null, error: null };
+      }
+      console.error("Error fetching DB quote period:", error);
+      return {
+        min_date: null,
+        max_date: null,
+        error: "DBの株価期間の取得に失敗しました。",
+      };
+    }
+
+    if (!data) {
+      return { min_date: null, max_date: null, error: null };
+    }
+
+    return { min_date: data.min_date, max_date: data.max_date, error: null };
+  } catch (e: unknown) {
+    console.error("Unexpected error in getDbQuotePeriod:", e);
+    return {
+      min_date: null,
+      max_date: null,
+      error: "DBの株価期間の取得中に予期せぬエラーが発生しました。",
     };
   }
 }

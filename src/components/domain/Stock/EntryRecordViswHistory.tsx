@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { recordStockView } from "@/app/actions/stock";
+import { recordStockView } from "@/app/actions/readAndRegistStockCompanyDetails";
 
 interface StockChartProps {
   stockCode: string;

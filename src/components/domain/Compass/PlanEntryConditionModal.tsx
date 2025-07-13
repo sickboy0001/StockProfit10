@@ -86,11 +86,8 @@ export const PlanEntryConditionModal: React.FC<EntryConditionModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     const filteredTypes = getEntryConditionTypes(transactionType);
-
-    // const filteredTypes = getFilteredEntryConditionTypes(transactionType);
     const defaultType =
       (filteredTypes[0]?.value as EntryConditionType) || "priceMovement";
-    // (filteredTypes[0]?.value as EntryConditionType) || "priceChange";
 
     if (conditionToEdit) {
       setModalEntryConditionType(conditionToEdit.type);

@@ -7,9 +7,12 @@ import { Input } from "@/components/ui/input"; // shadcn/uiのInput
 import { DatePicker } from "@/components/ui/date-picker"; // 仮にDate Pickerがあるとして
 import { DailyQuote } from "@/types/yFinance";
 import { CompanyInfo } from "@/types/company"; // 企業情報型をインポート
-import { getAndParseStockData, saveDailyQuotesToDb } from "@/app/actions/stock";
 import { getCompanyInfo } from "@/app/actions/company";
 import { dif_get_api_years } from "@/constants/common";
+import {
+  getAndParseStockData,
+  saveDailyQuotesToDb,
+} from "@/app/actions/readAndRegistStockCompanyDetails";
 // import ActionYApiAndRegist from "./ActionYApiAndRegist";
 
 export default function ActionYApiAndRegistOrg() {

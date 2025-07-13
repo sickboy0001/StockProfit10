@@ -2,13 +2,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { fetchStockDetailsFromDB } from "@/app/actions/stock";
 import { CompanyStockDetail, StockDetails } from "@/types/stock";
-import { format, parseISO } from "date-fns";
-
-import { getCompanyStockDetail } from "@/app/actions/readAndRegistCompanyStockDetail";
+import { format, parseISO } from "date-fns"; // getCompanyStockDetail の import は不要に
 import DetailItem from "./DetailItem";
 import { GetDetailItemDescription } from "@/constants/stockWord";
+import { readAndRegistStockCompanyDetails } from "@/app/actions/readAndRegistStockCompanyDetails";
 
 // Interface for individual detail items
 interface DetailItemData {
@@ -62,15 +60,15 @@ const StockCompanyDetail: React.FC<StockCompanyDetailProps> = ({
       setStockDetail(null); // ★ 既存情報をクリア
 
       try {
-        // 並行して取得できるものは Promise.all を使うと効率的
-        const [stockDetailsResponse, companyStockDetailData] =
-          await Promise.all([
-            fetchStockDetailsFromDB(stockCode),
-            getCompanyStockDetail(stockCode),
-          ]);
+        // サーバー側でデータをマージして返すようにしたため、呼び出しは1つに
+        const stockDetailsResponse = await readAndRegistStockCompanyDetails(
+          stockCode
+        );
 
         if (stockDetailsResponse.data) {
+          // 基本情報と詳細情報をそれぞれstateにセット
           setStockInfo(stockDetailsResponse.data);
+          setStockDetail(stockDetailsResponse.data.company_detail);
         } else {
           setError((prevError) =>
             prevError
@@ -78,7 +76,6 @@ const StockCompanyDetail: React.FC<StockCompanyDetailProps> = ({
               : stockDetailsResponse.error
           );
         }
-        setStockDetail(companyStockDetailData); // getCompanyStockDetailはエラー時nullを返すか例外を投げる想定
       } catch (e: unknown) {
         let errorMessage = "データの取得中に予期せぬエラーが発生しました。";
         if (e instanceof Error) {

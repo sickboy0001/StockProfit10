@@ -25,7 +25,9 @@ interface CompanyStockDetail {
   // [key: string]: any;
 }
 
-export async function getCompanyStockDetail(
+//spt_company_stock_detailsからデータ取得、なければ、YFinanceからログの取得する動き
+//対象の日付は１週間を想定
+export async function readAndRegistCompanyStockDetail(
   code: string
 ): Promise<CompanyStockDetail | null> {
   const supabase = await createClient();
@@ -51,10 +53,15 @@ export async function getCompanyStockDetail(
 
   const existing = existingData as CompanyStockDetail | null;
 
-  // updated_at が DATE 型で YYYY-MM-DD 形式の文字列として返されると仮定
-  if (existing && existing.updated_at === today) {
+  // 1週間前の日付を計算
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const oneWeekAgoString = oneWeekAgo.toISOString().slice(0, 10);
+
+  // updated_at が1週間以内のデータであれば、DBのデータを返す
+  if (existing && existing.updated_at >= oneWeekAgoString) {
     console.log(
-      `Returning existing, up-to-date stock detail for ${code} from DB.`
+      `Returning existing, up-to-date (within 1 week) stock detail for ${code} from DB.`
     );
     return existing;
   }

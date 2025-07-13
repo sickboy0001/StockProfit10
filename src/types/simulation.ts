@@ -116,3 +116,19 @@ export interface ISimulationRequestParams {
   };
   feeTax: IFeeTaxParams;
 }
+
+// --- Type Definitions ---
+// These types are now self-contained within this component.
+export type SignCondition = SimpleCondition | GroupCondition;
+
+export interface SimpleCondition {
+  type: string;
+  label?: string; // Label is optional
+  [key: string]: unknown;
+}
+
+export interface GroupCondition {
+  type: "group";
+  logic: "AND" | "OR";
+  conditions: SignCondition[];
+}

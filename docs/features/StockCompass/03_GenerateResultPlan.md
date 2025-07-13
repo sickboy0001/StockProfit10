@@ -100,11 +100,12 @@
 
 ```
 sptch_analysis_conditions
-├── sptch_simulation_results_stocks   ← フィルタリング銘柄結果
-├── sptch_simulation_results_trade    ← トレードシミュレーション結果
-├── sptch_simulation_results_summary  ← プラン全体の総合損益
-├── sptch_simulation_results          ← シミュレーション実行状況と全体結果
-│   └── sptch_simulation_logs         ← 各処理ステップの実行ログ
+└── sptch_simulation_results          ← シミュレーション実行状況と全体結果
+    ├── sptch_simulation_logs         ← 各処理ステップの実行ログ
+    ├── sptch_simulation_results_stocks   ← フィルタリング銘柄結果
+    ├── sptch_simulation_results_trade    ← トレードシミュレーション結果
+    └── sptch_simulation_results_summary  ← プラン全体の総合損益
+
 ```
 
 -----
@@ -112,11 +113,11 @@ sptch_analysis_conditions
 ### ER図要素の説明
 
   * **`sptch_analysis_conditions`**: 株の分析プランを定義する主要なテーブルです。
-  * **`sptch_simulation_results_stocks`**: `sptch_analysis_conditions` に基づく銘柄フィルタリングの結果を格納します。どの銘柄が投資対象になったかを記録します。
-  * **`sptch_simulation_results_trade`**: `sptch_analysis_conditions` に基づく個々の銘柄のトレードシミュレーション結果（エントリーからエグジットまで）を格納します。
-  * **`sptch_simulation_results_summary`**: `sptch_analysis_conditions` に基づくプラン全体の総合的な損益結果を格納します。
-  * **`sptch_simulation_results`**: 特定の分析プラン (`sptch_analysis_conditions`) に対するシミュレーション実行全体の状況（ステータス、開始/完了時刻、概要、エラーなど）を管理するテーブルです。
-  * **`sptch_simulation_logs`**: `sptch_simulation_results` の各シミュレーション実行における個別の処理ステップの詳細なログ（開始/完了時刻、処理時間、詳細情報など）を記録します。
+    * **`sptch_simulation_results_stocks`**: `sptch_analysis_conditions` に基づく銘柄フィルタリングの結果を格納します。どの銘柄が投資対象になったかを記録します。
+    * **`sptch_simulation_results_trade`**: `sptch_analysis_conditions` に基づく個々の銘柄のトレードシミュレーション結果（エントリーからエグジットまで）を格納します。
+    * **`sptch_simulation_results_summary`**: `sptch_analysis_conditions` に基づくプラン全体の総合的な損益結果を格納します。
+    * **`sptch_simulation_results`**: 特定の分析プラン (`sptch_analysis_conditions`) に対するシミュレーション実行全体の状況（ステータス、開始/完了時刻、概要、エラーなど）を管理するテーブルです。
+    * **`sptch_simulation_logs`**: `sptch_simulation_results` の各シミュレーション実行における個別の処理ステップの詳細なログ（開始/完了時刻、処理時間、詳細情報など）を記録します。
 
 
 
@@ -128,7 +129,7 @@ sptch_analysis_conditions
 | カラム名| データ型| 説明|
 | :---------------------- | :---------- | :-------------------------------------------- |
 | id  | BIGSERIAL   | 主キー   |
-| analysis_condition_id | BIGINT  | 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
+| simulation_result_id | BIGINT      | NOT NULL, FK            | 関連するシミュレーション結果ID (sptch_simulation_results.id を参照)              |
 | stock_code | VARCHAR(10) | 銘柄コード |
 | filter_reason  | TEXT| 除外理由（例: 出来高不足・資本金不足・投資額オーバーなど）|
 | score   | INTEGER | 自動判定のスコア（0: 対象外、1: 対象）|
@@ -143,8 +144,9 @@ sptch_analysis_conditions
 | カラム名| データ型  | 説明|
 | :---------------------- | :------------ | :-------------------------------------------- |
 | id  | BIGSERIAL | 主キー   |
-| analysis_condition_id | BIGINT| 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
+| simulation_result_id | BIGINT      | NOT NULL, FK            | 関連するシミュレーション結果ID (sptch_simulation_results.id を参照)              |
 | stock_code | VARCHAR(10)   | 銘柄コード |
+| trade_method | VARCHAR(10)   | long/short |
 | target_date| DATE  | 評価開始日（この日からシミュレーション開始）|
 | target_close_price| NUMERIC(12,2) | 評価開始日の終値（参考用） |
 | entry_date | DATE | **エントリー情報** エントリー日 |
@@ -171,7 +173,7 @@ sptch_analysis_conditions
 | カラム名| データ型  | 説明|
 | :---------------------- | :-------- | :-------------------------------------------- |
 | id  | BIGSERIAL | 主キー   |
-| analysis_condition_id | BIGINT| 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
+| simulation_result_id | BIGINT      | NOT NULL, FK            | 関連するシミュレーション結果ID (sptch_simulation_results.id を参照)              |
 | gross_profit_amount | NUMERIC(14,2) | プラン全体の損益:税引前の総利益金額 |
 | gross_profit_rate | NUMERIC(7,4) | プラン全体の損益:税引前の利益率（総合）|
 | net_profit_amount | NUMERIC(14,2) | プラン全体の損益:税引後の総利益金額 |
@@ -287,29 +289,33 @@ WHERE id = (先ほど挿入したログのID);
 <summary>DDL</summmary>
 
 ```SQL
-
+-- drop table sptch_simulation_results_stocks
 CREATE TABLE sptch_simulation_results_stocks (
     id BIGSERIAL PRIMARY KEY,
-    analysis_condition_id BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
+    simulation_result_id BIGINT NOT NULL,
     stock_code VARCHAR(10) NOT NULL,
     filter_reason TEXT,
     score INTEGER NOT NULL DEFAULT 0,
     manual_score INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_simulation_result FOREIGN KEY (simulation_result_id) REFERENCES public.sptch_simulation_results(id) ON DELETE CASCADE
+
 );
 
 -- インデックス（検索高速化）
-CREATE INDEX idx_srs_analysis_stock ON sptch_simulation_results_stocks(analysis_condition_id, stock_code);
+-- CREATE INDEX idx_srs_analysis_stock ON sptch_simulation_results_stocks(analysis_condition_id, stock_code);
+CREATE INDEX idx_srs_analysis_stock ON sptch_simulation_results_stocks(simulation_result_id, stock_code);
 
-
+-- drop table sptch_simulation_results_trade;
 CREATE TABLE sptch_simulation_results_trade (
     id BIGSERIAL PRIMARY KEY,
-    analysis_condition_id  BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
+    simulation_result_id BIGINT NOT NULL,
     stock_code VARCHAR(10) NOT NULL,
+    trade_method VARCHAR(10) NOT NULL,
     target_date DATE NOT NULL,
     target_close_price NUMERIC(12,2),
-    
+
     -- Entry
     entry_date DATE,
     entry_close_price NUMERIC(12,2),
@@ -329,25 +335,27 @@ CREATE TABLE sptch_simulation_results_trade (
     net_profit_rate NUMERIC(7,4),
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_simulation_result FOREIGN KEY (simulation_result_id) REFERENCES public.sptch_simulation_results(id) ON DELETE CASCADE
+
 );
 
 -- インデックス
 CREATE INDEX idx_srt_analysis_stock_date 
-    ON sptch_simulation_results_trade(analysis_condition_id, stock_code, target_date);
+    ON sptch_simulation_results_trade(simulation_result_id, stock_code, target_date);
 
-
+-- drop table sptch_simulation_results_summary
 CREATE TABLE sptch_simulation_results_summary (
     id BIGSERIAL PRIMARY KEY,
-    analysis_condition_id  BIGINT NOT NULL UNIQUE REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
-
+    simulation_result_id BIGINT NOT NULL,
     gross_profit_amount NUMERIC(14,2),
     gross_profit_rate NUMERIC(7,4),
     net_profit_amount NUMERIC(14,2),
     net_profit_rate NUMERIC(7,4),
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_simulation_result FOREIGN KEY (simulation_result_id) REFERENCES public.sptch_simulation_results(id) ON DELETE CASCADE
 );
 
 
@@ -422,6 +430,13 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 -- 今後 public スキーマで作成されるすべてのシーケンスに対してデフォルトの権限を付与
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO anon;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO authenticated;
+
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.sptch_simulation_results_stocks TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.sptch_simulation_results_trade TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.sptch_simulation_results_summary TO authenticated;
+
+
 ```
 
 </details>

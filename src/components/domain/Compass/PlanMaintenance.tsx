@@ -273,7 +273,7 @@ export default function PlanMaintenance() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/results/${ThisDisplayPlan.id}`}>
+                        <Link href={`/Compass/Results/${ThisDisplayPlan.id}`}>
                           結果参照
                         </Link>
                       </DropdownMenuItem>

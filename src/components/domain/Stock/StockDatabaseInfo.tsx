@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { fetchStockDetailsFromDB } from "@/app/actions/stock";
 import { StockDetails } from "@/types/stock";
 import StockCompanyDetail from "./StockCompanyDetail";
 import {
@@ -12,6 +11,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import PortfolioButton from "./PortfolioButton";
+import { readAndRegistStockCompanyDetails } from "@/app/actions/readAndRegistStockCompanyDetails";
 
 interface StockDatabaseInfoProps {
   stockCode: string;
@@ -38,7 +38,7 @@ const StockDatabaseInfo: React.FC<StockDatabaseInfoProps> = ({
       setIsLoading(true);
       setError(null);
       setStockInfo(null); // 既存情報をクリア
-      const response = await fetchStockDetailsFromDB(stockCode);
+      const response = await readAndRegistStockCompanyDetails(stockCode);
       if (response.data) {
         setStockInfo(response.data);
       } else {

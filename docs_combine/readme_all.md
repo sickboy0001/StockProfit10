@@ -12,7 +12,7 @@ StockProfit10に関する仕様です。
   * [チャート](./features/DisplayChart.md)
   * [銘柄情報入手](./features/getDetailStockInfo.md)
   * [API比較](./features/review.md)
-  * [仮説検証](./features/StockCompass/README.MD.md)
+  * [仮説検証](./features/StockCompass/README.MD)
   
 
 ```
@@ -23,6 +23,8 @@ docs/
 ├─ ui_design.md               # UI設計
 ├─ architecture_design.md     # システム構成設計
 └─ features/                 # 機能ごとの詳細仕様
+    ├─  StockComass/                 # 機能ごとの詳細仕様
+    |    └─README.MD  
     ├── simulation.md
     └── portfolio.md
 ```
@@ -1840,6 +1842,276 @@ ORDER BY pg_total_relation_size(quote_ident(table_schema) || '.' || quote_ident(
   - ストレージ全体の使用量は「Storage」→「Database Usage」などで確認可能
 - 詳細なサイズを確認したい場合は SQLクエリで確認するのが最も確実です。
 
+
+
+---
+
+# MarketCalendar.md
+
+# すすめ方
+
+- [ ] AppRouter設定
+- [ ] Menu設定(スーパーユーザー、管理者のみ)
+- [ ] 基本は一覧画面で、そこからもインポートできるようにする
+- [ ] 削除の実装
+- [ ] 実装の検証
+
+
+# market_calendar
+以下は、**株式市場の営業日管理用テーブル（PostgreSQL/Supabase用）**の設計案です。
+---
+
+
+
+## ✅ 営業日テーブル設計案 `market_calendar`
+
+| 列名        | 型                 | 説明                       |
+| --------- | ----------------- | ------------------------ |
+| `date`    | `DATE` (PK)       | 対象日付（例: `2025-07-04`）    |
+| `is_open` | `BOOLEAN`         | 営業日かどうか（true = 営業日）      |
+| `note`    | `TEXT` (nullable) | 備考（例: "憲法記念日", "大発会" など） |
+
+---
+
+### 🎯 主な特徴とメリット
+
+| 機能             | 内容                                        |
+| -------------- | ----------------------------------------- |
+| ✔ 主キー：`date`   | 日付ベースでユニークに判定                             |
+| ✔ 高速検索         | `WHERE date = 'YYYY-MM-DD'` で営業日判定        |
+| ✔ 将来の拡張性       | `note` を使って祝日名やイベント追加可能                   |
+| ✔ 非営業日の理由も保存可能 | `is_open = false` かつ `note = '年末年始休業'` など |
+
+---
+
+## 🧩 利用例（SQLクエリ）
+
+### ① 今日が営業日か？
+
+```sql
+SELECT is_open FROM market_calendar WHERE date = CURRENT_DATE;
+```
+
+### ② 次の営業日を探す
+
+```sql
+SELECT date FROM market_calendar
+WHERE date > CURRENT_DATE AND is_open = true
+ORDER BY date
+LIMIT 1;
+```
+
+### ③ 過去30営業日分の取得
+
+```sql
+SELECT date FROM market_calendar
+WHERE date <= CURRENT_DATE AND is_open = true
+ORDER BY date DESC
+LIMIT 30;
+```
+
+---
+
+## 💾 テーブル作成SQL（PostgreSQL / Supabase用）
+
+```sql
+CREATE TABLE market_calendar (
+    date DATE PRIMARY KEY,
+    is_open BOOLEAN NOT NULL,
+    note TEXT
+);
+```
+### Supabaseの場合：
+
+1. Supabase Studioにログイン
+2. `market_calendar` テーブル作成
+3. 「インポート」からCSVをアップロード → 自動マッピング
+
+
+### 1. `ImportMarketCalendar`
+- CSVテキストを貼り付けてインポート可能な画面
+- 書式例：`date,is_open,note`  
+  `2025-07-21,false,海の日`
+- CSV内の日付の下限、日付の上限は土日は土日として落とす（要実装）
+- CSV内の下限の日付が今日以降なら、今日から日付の上限まで、土日はＣｌｏｓｅとして落とす。
+### 2. `MarketCalendarList`
+- 指定年の営業日一覧を表示する画面
+- 年の変更が可能、曜日と営業状況（Open / Close）を表示
+- 間違い確認・メンテ用に色分けあり（非営業日は赤背景）
+
+### TypeScript NextJSTailWindcss
+``` ts
+// market_calendar管理用UI（Next.js + TailwindCSS）
+
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { format, parseISO, getDay } from "date-fns";
+import ja from "date-fns/locale/ja";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectItem } from "@/components/ui/select";
+
+// 曜日表記用
+const dayOfWeek = ["日", "月", "火", "水", "木", "金", "土"];
+
+// CSVを貼り付け → DBへ登録画面
+export function ImportMarketCalendar() {
+  const [csvText, setCsvText] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleImport = async () => {
+    try {
+      const rows = csvText.trim().split("\n").slice(1); // skip header
+      const data = rows.map((line) => {
+        const [date, isOpen, note] = line.split(",");
+        return { date, is_open: isOpen === "true", note };
+      });
+      const res = await fetch("/api/market-calendar/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data }),
+      });
+      if (!res.ok) throw new Error("Import failed");
+      setMessage("インポートに成功しました。");
+    } catch (err) {
+      console.error(err);
+      setMessage("インポート中にエラーが発生しました。");
+    }
+  };
+
+  return (
+    <Card className="max-w-3xl mx-auto my-4">
+      <CardContent className="space-y-4">
+        <h2 className="text-xl font-bold">営業日CSVインポート</h2>
+        <Textarea
+          rows={10}
+          value={csvText}
+          onChange={(e) => setCsvText(e.target.value)}
+          placeholder="date,is_open,note\n2025-07-21,false,海の日"
+        />
+        <Button onClick={handleImport}>インポート実行</Button>
+        {message && <p className="text-sm text-green-700">{message}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// 一覧画面（年指定）
+export function MarketCalendarList() {
+  const thisYear = new Date().getFullYear();
+  const [year, setYear] = useState(thisYear);
+  const [records, setRecords] = useState([]);
+
+  useEffect(() => {
+    fetch(`/api/market-calendar?year=${year}`)
+      .then((res) => res.json())
+      .then((data) => setRecords(data));
+  }, [year]);
+
+  return (
+    <Card className="max-w-5xl mx-auto my-8">
+      <CardContent>
+        <div className="flex items-center gap-4 mb-4">
+          <label>年指定：</label>
+          <Input
+            type="number"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="w-32"
+          />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full border text-sm">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2 border">日付</th>
+                <th className="p-2 border">曜日</th>
+                <th className="p-2 border">備考</th>
+                <th className="p-2 border">営業</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((r: any) => {
+                const dateObj = parseISO(r.date);
+                const dow = dayOfWeek[getDay(dateObj)];
+                return (
+                  <tr key={r.date} className={r.is_open ? "" : "bg-red-50"}>
+                    <td className="p-1 border">{format(dateObj, "yyyy.MM.dd")}</td>
+                    <td className="p-1 border">{dow}</td>
+                    <td className="p-1 border">{r.note || ""}</td>
+                    <td className="p-1 border">{r.is_open ? "Open" : "Close"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+``` 
+### 内閣府カレンダーCSV
+
+こちらから
+https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
+
+＞昭和30年（1955年）から令和8年（2026年）国民の祝日（csv形式：20KB）
+
+```
+1955/5/3,憲法記念日
+1955/5/5,こどもの日
+1955/9/24,秋分の日
+1955/11/3,文化の日
+1955/11/23,勤労感謝の日
+1956/1/1,元日
+1956/1/15,成人の日
+1956/3/21,春分の日
+1956/4/29,天皇誕生日
+1956/5/3,憲法記念日
+1956/5/5,こどもの日
+1956/9/23,秋分の日
+```
+
+### 　指定された年の情報の取得
+``` ts
+// pages/api/market-calendar.ts
+import { NextApiRequest, NextApiResponse } from 'next'
+import { prisma } from '@/lib/prisma'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const year = parseInt(req.query.year as string)
+
+  if (isNaN(year)) {
+    return res.status(400).json({ error: 'Invalid year' })
+  }
+
+  const from = new Date(`${year}-01-01`)
+  const to = new Date(`${year}-12-31`)
+
+  try {
+    const records = await prisma.market_calendar.findMany({
+      where: {
+        date: {
+          gte: from,
+          lte: to,
+        },
+      },
+      orderBy: {
+        date: 'asc',
+      },
+    })
+
+    return res.status(200).json(records)
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json({ error: 'Internal Server Error' })
+  }
+}
+```
 
 
 ---
@@ -3862,6 +4134,109 @@ CREATE TABLE sptch_simulation_results_summary (
 |プラン実行/編集/引用新規	|2025/01/16 08:12|sickboy|検証用||(2)1234,2123・・・・|出来高:100以上、資本金|2024/01/01-2025/01/01|ロング|Entry↓|Exit↓|-|無効|
 
 
+```sql
+-- drop function get_analysis_conditions_for_display
+-- select * from get_analysis_conditions_for_display('76b8d0ed-825d-43a6-a725-37e10c11015b')
+CREATE OR REPLACE FUNCTION public.get_analysis_conditions_for_display(
+    p_user_id UUID DEFAULT NULL -- Optional: filter by user
+)
+RETURNS TABLE (
+    id BIGINT,
+    user_id UUID,
+    user_name TEXT, -- User's display name
+    plan_name TEXT,
+    plan_memo TEXT,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    stock_selection_id BIGINT,
+    stock_selection_name TEXT,
+    simulation_period_id BIGINT,
+    simulation_period_name TEXT,
+    simulation_start_date DATE,
+    simulation_end_date DATE,
+    trade_parameter_id BIGINT,
+    trade_parameter_name TEXT,
+    signal_id BIGINT,
+    signal_name TEXT,
+    transaction_type VARCHAR(10),
+    entry_signal_id BIGINT,
+    entry_signal_name TEXT,
+    exit_signal_id BIGINT,
+    exit_signal_name TEXT,
+    fee_tax_id BIGINT,
+    fee_tax_name TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        sac.id,
+        sac.user_id,
+        su.name AS user_name, -- Fetch user name from spt_user
+        sac.name AS plan_name,
+        sac.memo AS plan_memo,
+        sac.deleted_at,
+        sac.created_at,
+        sac.updated_at,
+        sssh.id AS stock_selection_id,
+        sssh.name AS stock_selection_name,
+        ssp.id AS simulation_period_id ,
+        ssp.name AS simulation_period_name,
+        ssp.start_date AS simulation_start_date,
+        ssp.end_date AS simulation_end_date,
+        stp.id AS trade_parameter_id,
+        stp.name AS trade_parameter_name,
+        ss.id as signal_id ,
+        ss.name AS signal_name,
+        ss.transaction_type,
+        ses.id as entry_signal_id ,
+        ses.name AS entry_signal_name,
+        sexs.id as exit_signal_id,
+        sexs.name AS exit_signal_name,
+        sft.id as fee_tax_id ,
+        sft.name AS fee_tax_name
+    FROM
+        sptch_analysis_conditions sac
+    LEFT JOIN
+        spt_user su ON sac.user_id = su.id -- Join with spt_user
+    LEFT JOIN
+        sptch_stock_selections_header sssh ON sac.stock_selection_header_id = sssh.id
+    LEFT JOIN
+        sptch_simulation_periods ssp ON sac.simulation_period_id = ssp.id
+    LEFT JOIN
+        sptch_trade_parameters stp ON sac.trade_parameter_id = stp.id
+    LEFT JOIN
+        sptch_signals ss ON sac.signal_id = ss.id
+    LEFT JOIN
+        sptch_entry_signals ses ON ss.entry_signal_id = ses.id
+    LEFT JOIN
+        sptch_exit_signals sexs ON ss.exit_signal_id = sexs.id
+    LEFT JOIN
+        sptch_fee_taxes sft ON sac.fee_tax_id = sft.id
+    WHERE
+        (p_user_id IS NULL OR sac.user_id = p_user_id)     ORDER BY
+        sac.created_at DESC;
+END;
+$$;
+
+-- Grant execution to authenticated users
+GRANT EXECUTE ON FUNCTION public.get_analysis_conditions_for_display(UUID) TO authenticated;
+
+
+-- select * from get_analysis_conditions_for_display('76b8d0ed-825d-43a6-a725-37e10c11015b')
+
+
+
+```
+
+```js
+
+```
+
 ---
 
 # 02_FormulatePlan.md
@@ -3972,7 +4347,539 @@ CREATE TABLE sptch_simulation_results_summary (
 
 ---
 
-# 03_GenerateResultPlan..md
+# 03_01_ad.md
+
+
+#### 詳細
+- 01-01:対象の銘柄の選別
+  - input sptch_stock_selections_header sptch_stock_selections_stocks sptch_simulation_periods
+  - output sptch_simulation_results_stocks
+- 02-01:EntrySignal条件のN日前を確認
+  - input sptch_signals
+- 02-02:開始日のN日前を取得
+  - input sptch_simulation_periods 
+  - getDaysNBefore
+- 02-03:ExitSignal条件のM日後を確認
+  - input sptch_exit_signals
+- 02-04:終了日のM日後を取得
+  - input sptch_simulation_periods
+  - getDaysMAfter
+- 02-05:銘柄の配列の１つ目を指定
+  - input sptch_simulation_results_stocks
+- 03-01:銘柄に対しての処理開始
+  - input sptch_simulation_results_stocks
+- 03-02:銘柄のヒストグラムが開始日のN日前、終了日のM日後を含んでいるか？
+  - input spt_daily_quotes
+- 03-03:開始日N日前、終了日M日後のデータを取得
+  - input spt_daily_quotes
+- 03-04:開始日N日前、終了日M日後のデータを取得
+  - input spt_daily_quotes
+- 03-05:開始日を基準日として評価開始
+- 04-01:基準日でのEntrySignalの評価
+  - input sptch_signals sptch_entry_signals
+- 04-02:基準日でのEntry
+  - input sptch_signals sptch_entry_signals sptch_trade_parameters
+  - output sptch_simulation_results_trade
+- 04-03:Exit日でのExit
+  - input sptch_signals sptch_exit_signals sptch_fee_taxes
+  - output sptch_simulation_results_trade
+- 04-04:評価、登録
+  - output sptch_simulation_results
+- 04-05:翌日が終了日以前
+- 05-01:次の銘柄へ
+- 06-01:終了処理、記録登録
+  - output sptch_simulation_results
+- 
+- 
+関連するテーブル（詳細）
+sptch_analysis_conditions: FormulatePlanで定義されるすべての条件の組み合わせを指し示すメインのテーブル。ここで作成されたプランが保存されます。
+sptch_stock_selections_header: 銘柄選択条件のヘッダー情報。
+sptch_stock_selections_stocks: 銘柄選択条件の実データ（個々の銘柄コード）。
+sptch_simulation_periods: シミュレーション期間条件。
+sptch_trade_parameters: 取引前提条件。
+sptch_signals: 売買シグナル条件（エントリー・エグジットのセット）。
+sptch_entry_signals: エントリーシグナル条件の詳細（JSONB形式で具体的なロジックを格納）。
+sptch_exit_signals: エグジットシグナル条件の詳細（JSONB形式で具体的なロジックを格納）。
+sptch_fee_taxes: 手数料・税金条件。
+
+sptch_analysis_conditions
+├── sptch_simulation_results_stocks   ← フィルタリング銘柄結果
+├── sptch_simulation_results_trade    ← トレードシミュレーション結果
+├── sptch_simulation_results_summary  ← プラン全体の総合損益
+├── sptch_simulation_results          ← シミュレーション実行状況と全体結果
+│   └── sptch_simulation_logs         ← 各処理ステップの実行ログ
+
+
+
+# market_calendar
+以下は、**株式市場の営業日管理用テーブル（PostgreSQL/Supabase用）**の設計案です。
+---
+
+## ✅ 営業日テーブル設計案 `market_calendar`
+
+| 列名        | 型                 | 説明                       |
+| --------- | ----------------- | ------------------------ |
+| `date`    | `DATE` (PK)       | 対象日付（例: `2025-07-04`）    |
+| `is_open` | `BOOLEAN`         | 営業日かどうか（true = 営業日）      |
+| `note`    | `TEXT` (nullable) | 備考（例: "憲法記念日", "大発会" など） |
+
+---
+
+### 🎯 主な特徴とメリット
+
+| 機能             | 内容                                        |
+| -------------- | ----------------------------------------- |
+| ✔ 主キー：`date`   | 日付ベースでユニークに判定                             |
+| ✔ 高速検索         | `WHERE date = 'YYYY-MM-DD'` で営業日判定        |
+| ✔ 将来の拡張性       | `note` を使って祝日名やイベント追加可能                   |
+| ✔ 非営業日の理由も保存可能 | `is_open = false` かつ `note = '年末年始休業'` など |
+
+---
+
+## 🧩 利用例（SQLクエリ）
+
+### ① 今日が営業日か？
+
+```sql
+SELECT is_open FROM market_calendar WHERE date = CURRENT_DATE;
+```
+
+### ② 次の営業日を探す
+
+```sql
+SELECT date FROM market_calendar
+WHERE date > CURRENT_DATE AND is_open = true
+ORDER BY date
+LIMIT 1;
+```
+
+### ③ 過去30営業日分の取得
+
+```sql
+SELECT date FROM market_calendar
+WHERE date <= CURRENT_DATE AND is_open = true
+ORDER BY date DESC
+LIMIT 30;
+```
+
+---
+
+## 💾 テーブル作成SQL（PostgreSQL / Supabase用）
+
+```sql
+CREATE TABLE market_calendar (
+    date DATE PRIMARY KEY,
+    is_open BOOLEAN NOT NULL,
+    note TEXT
+);
+```
+### Supabaseの場合：
+
+1. Supabase Studioにログイン
+2. `market_calendar` テーブル作成
+3. 「インポート」からCSVをアップロード → 自動マッピング
+
+
+### 1. `ImportMarketCalendar`
+- CSVテキストを貼り付けてインポート可能な画面
+- 書式例：`date,is_open,note`  
+  `2025-07-21,false,海の日`
+
+### 2. `MarketCalendarList`
+- 指定年の営業日一覧を表示する画面
+- 年の変更が可能、曜日と営業状況（Open / Close）を表示
+- 間違い確認・メンテ用に色分けあり（非営業日は赤背景）
+
+
+### TypeScript NextJSTailWindcss
+``` ts
+// market_calendar管理用UI（Next.js + TailwindCSS）
+
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { format, parseISO, getDay } from "date-fns";
+import ja from "date-fns/locale/ja";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectItem } from "@/components/ui/select";
+
+// 曜日表記用
+const dayOfWeek = ["日", "月", "火", "水", "木", "金", "土"];
+
+// CSVを貼り付け → DBへ登録画面
+export function ImportMarketCalendar() {
+  const [csvText, setCsvText] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleImport = async () => {
+    try {
+      const rows = csvText.trim().split("\n").slice(1); // skip header
+      const data = rows.map((line) => {
+        const [date, isOpen, note] = line.split(",");
+        return { date, is_open: isOpen === "true", note };
+      });
+      const res = await fetch("/api/market-calendar/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data }),
+      });
+      if (!res.ok) throw new Error("Import failed");
+      setMessage("インポートに成功しました。");
+    } catch (err) {
+      console.error(err);
+      setMessage("インポート中にエラーが発生しました。");
+    }
+  };
+
+  return (
+    <Card className="max-w-3xl mx-auto my-4">
+      <CardContent className="space-y-4">
+        <h2 className="text-xl font-bold">営業日CSVインポート</h2>
+        <Textarea
+          rows={10}
+          value={csvText}
+          onChange={(e) => setCsvText(e.target.value)}
+          placeholder="date,is_open,note\n2025-07-21,false,海の日"
+        />
+        <Button onClick={handleImport}>インポート実行</Button>
+        {message && <p className="text-sm text-green-700">{message}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// 一覧画面（年指定）
+export function MarketCalendarList() {
+  const thisYear = new Date().getFullYear();
+  const [year, setYear] = useState(thisYear);
+  const [records, setRecords] = useState([]);
+
+  useEffect(() => {
+    fetch(`/api/market-calendar?year=${year}`)
+      .then((res) => res.json())
+      .then((data) => setRecords(data));
+  }, [year]);
+
+  return (
+    <Card className="max-w-5xl mx-auto my-8">
+      <CardContent>
+        <div className="flex items-center gap-4 mb-4">
+          <label>年指定：</label>
+          <Input
+            type="number"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="w-32"
+          />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full border text-sm">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2 border">日付</th>
+                <th className="p-2 border">曜日</th>
+                <th className="p-2 border">備考</th>
+                <th className="p-2 border">営業</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((r: any) => {
+                const dateObj = parseISO(r.date);
+                const dow = dayOfWeek[getDay(dateObj)];
+                return (
+                  <tr key={r.date} className={r.is_open ? "" : "bg-red-50"}>
+                    <td className="p-1 border">{format(dateObj, "yyyy.MM.dd")}</td>
+                    <td className="p-1 border">{dow}</td>
+                    <td className="p-1 border">{r.note || ""}</td>
+                    <td className="p-1 border">{r.is_open ? "Open" : "Close"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+``` 
+
+---
+
+# 03_02_marketCalendar.md
+
+# すすめ方
+
+- [ ] AppRouter設定
+- [ ] Menu設定(スーパーユーザー、管理者のみ)
+- [ ] 基本は一覧画面で、そこからもインポートできるようにする
+- [ ] 削除の実装
+- [ ] 実装の検証
+
+
+# market_calendar
+以下は、**株式市場の営業日管理用テーブル（PostgreSQL/Supabase用）**の設計案です。
+---
+
+
+
+## ✅ 営業日テーブル設計案 `market_calendar`
+
+| 列名        | 型                 | 説明                       |
+| --------- | ----------------- | ------------------------ |
+| `date`    | `DATE` (PK)       | 対象日付（例: `2025-07-04`）    |
+| `is_open` | `BOOLEAN`         | 営業日かどうか（true = 営業日）      |
+| `note`    | `TEXT` (nullable) | 備考（例: "憲法記念日", "大発会" など） |
+
+---
+
+### 🎯 主な特徴とメリット
+
+| 機能             | 内容                                        |
+| -------------- | ----------------------------------------- |
+| ✔ 主キー：`date`   | 日付ベースでユニークに判定                             |
+| ✔ 高速検索         | `WHERE date = 'YYYY-MM-DD'` で営業日判定        |
+| ✔ 将来の拡張性       | `note` を使って祝日名やイベント追加可能                   |
+| ✔ 非営業日の理由も保存可能 | `is_open = false` かつ `note = '年末年始休業'` など |
+
+---
+
+## 🧩 利用例（SQLクエリ）
+
+### ① 今日が営業日か？
+
+```sql
+SELECT is_open FROM market_calendar WHERE date = CURRENT_DATE;
+```
+
+### ② 次の営業日を探す
+
+```sql
+SELECT date FROM market_calendar
+WHERE date > CURRENT_DATE AND is_open = true
+ORDER BY date
+LIMIT 1;
+```
+
+### ③ 過去30営業日分の取得
+
+```sql
+SELECT date FROM market_calendar
+WHERE date <= CURRENT_DATE AND is_open = true
+ORDER BY date DESC
+LIMIT 30;
+```
+
+---
+
+## 💾 テーブル作成SQL（PostgreSQL / Supabase用）
+
+```sql
+CREATE TABLE market_calendar (
+    date DATE PRIMARY KEY,
+    is_open BOOLEAN NOT NULL,
+    note TEXT
+);
+```
+### Supabaseの場合：
+
+1. Supabase Studioにログイン
+2. `market_calendar` テーブル作成
+3. 「インポート」からCSVをアップロード → 自動マッピング
+
+
+### 1. `ImportMarketCalendar`
+- CSVテキストを貼り付けてインポート可能な画面
+- 書式例：`date,is_open,note`  
+  `2025-07-21,false,海の日`
+- CSV内の日付の下限、日付の上限は土日は土日として落とす（要実装）
+- CSV内の下限の日付が今日以降なら、今日から日付の上限まで、土日はＣｌｏｓｅとして落とす。
+### 2. `MarketCalendarList`
+- 指定年の営業日一覧を表示する画面
+- 年の変更が可能、曜日と営業状況（Open / Close）を表示
+- 間違い確認・メンテ用に色分けあり（非営業日は赤背景）
+
+### TypeScript NextJSTailWindcss
+``` ts
+// market_calendar管理用UI（Next.js + TailwindCSS）
+
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { format, parseISO, getDay } from "date-fns";
+import ja from "date-fns/locale/ja";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectItem } from "@/components/ui/select";
+
+// 曜日表記用
+const dayOfWeek = ["日", "月", "火", "水", "木", "金", "土"];
+
+// CSVを貼り付け → DBへ登録画面
+export function ImportMarketCalendar() {
+  const [csvText, setCsvText] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleImport = async () => {
+    try {
+      const rows = csvText.trim().split("\n").slice(1); // skip header
+      const data = rows.map((line) => {
+        const [date, isOpen, note] = line.split(",");
+        return { date, is_open: isOpen === "true", note };
+      });
+      const res = await fetch("/api/market-calendar/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data }),
+      });
+      if (!res.ok) throw new Error("Import failed");
+      setMessage("インポートに成功しました。");
+    } catch (err) {
+      console.error(err);
+      setMessage("インポート中にエラーが発生しました。");
+    }
+  };
+
+  return (
+    <Card className="max-w-3xl mx-auto my-4">
+      <CardContent className="space-y-4">
+        <h2 className="text-xl font-bold">営業日CSVインポート</h2>
+        <Textarea
+          rows={10}
+          value={csvText}
+          onChange={(e) => setCsvText(e.target.value)}
+          placeholder="date,is_open,note\n2025-07-21,false,海の日"
+        />
+        <Button onClick={handleImport}>インポート実行</Button>
+        {message && <p className="text-sm text-green-700">{message}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// 一覧画面（年指定）
+export function MarketCalendarList() {
+  const thisYear = new Date().getFullYear();
+  const [year, setYear] = useState(thisYear);
+  const [records, setRecords] = useState([]);
+
+  useEffect(() => {
+    fetch(`/api/market-calendar?year=${year}`)
+      .then((res) => res.json())
+      .then((data) => setRecords(data));
+  }, [year]);
+
+  return (
+    <Card className="max-w-5xl mx-auto my-8">
+      <CardContent>
+        <div className="flex items-center gap-4 mb-4">
+          <label>年指定：</label>
+          <Input
+            type="number"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="w-32"
+          />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full border text-sm">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2 border">日付</th>
+                <th className="p-2 border">曜日</th>
+                <th className="p-2 border">備考</th>
+                <th className="p-2 border">営業</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((r: any) => {
+                const dateObj = parseISO(r.date);
+                const dow = dayOfWeek[getDay(dateObj)];
+                return (
+                  <tr key={r.date} className={r.is_open ? "" : "bg-red-50"}>
+                    <td className="p-1 border">{format(dateObj, "yyyy.MM.dd")}</td>
+                    <td className="p-1 border">{dow}</td>
+                    <td className="p-1 border">{r.note || ""}</td>
+                    <td className="p-1 border">{r.is_open ? "Open" : "Close"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+``` 
+### 内閣府カレンダーCSV
+
+こちらから
+https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
+
+＞昭和30年（1955年）から令和8年（2026年）国民の祝日（csv形式：20KB）
+
+```
+1955/5/3,憲法記念日
+1955/5/5,こどもの日
+1955/9/24,秋分の日
+1955/11/3,文化の日
+1955/11/23,勤労感謝の日
+1956/1/1,元日
+1956/1/15,成人の日
+1956/3/21,春分の日
+1956/4/29,天皇誕生日
+1956/5/3,憲法記念日
+1956/5/5,こどもの日
+1956/9/23,秋分の日
+```
+
+### 　指定された年の情報の取得
+``` ts
+// pages/api/market-calendar.ts
+import { NextApiRequest, NextApiResponse } from 'next'
+import { prisma } from '@/lib/prisma'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const year = parseInt(req.query.year as string)
+
+  if (isNaN(year)) {
+    return res.status(400).json({ error: 'Invalid year' })
+  }
+
+  const from = new Date(`${year}-01-01`)
+  const to = new Date(`${year}-12-31`)
+
+  try {
+    const records = await prisma.market_calendar.findMany({
+      where: {
+        date: {
+          gte: from,
+          lte: to,
+        },
+      },
+      orderBy: {
+        date: 'asc',
+      },
+    })
+
+    return res.status(200).json(records)
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json({ error: 'Internal Server Error' })
+  }
+}
+```
+
+
+---
+
+# 03_GenerateResultPlan.md
 
 # 03_GenerateResultPlan: 計画に基づく結果生成
 
@@ -3982,7 +4889,7 @@ CREATE TABLE sptch_simulation_results_summary (
 * **役割：** 既存のプランを用いて評価するための結果を導くことが責務です。ロバストネス検証のフロー図（StockCompass_LH_image03.drawio.png）に示されている複雑な計算ロジックが、この役割の具体的な内容です。
 
 ## 機能詳細
-
+<!-- 
 ### 1. ロバストネス（プラン検証）ワークフロー
 設定されたプラン（銘柄、シグナル、出口条件など）に基づき、過去の市場データを使ってシミュレーションを実行します。
 
@@ -4008,16 +4915,405 @@ CREATE TABLE sptch_simulation_results_summary (
 * **06.01 Out:** エグジット条件をクリアした場合の処理を開始します。
 * **06.02 データ登録、Outに基づいた計算の実行:** エグジットが成立した時点のデータ、最終損益、損益発生日などを記録し、計算を実行します。
 * **06.03 次の銘柄の確認（有→02.01へ なし→終了）:** 全ての銘柄の処理が完了したかを確認し、次の銘柄へ進むか、処理を終了します。
+ -->
 
 ### 2. データ準備
-この役割を実行するために必要なデータです。
-* **基本データ:**
-    * 日付、始値、高値、安値、終値、出来高などの日次市場データ。
-* **各企業ごとの現状での情報:**
-    * 企業名、純資産、従業員数、発行株式数など（フィルター条件適用時に使用）。
+
+事前に、**02_FormultaPlan**で作成
+
+- sptch_analysis_conditions: FormulatePlanで定義されるすべての条件の組み合わせを指し示すメインのテーブル。ここで作成されたプランが保存されます。
+- sptch_stock_selections_header: 銘柄選択条件のヘッダー情報。
+- sptch_stock_selections_stocks: 銘柄選択条件の実データ（個々の銘柄コード）。
+- sptch_simulation_periods: シミュレーション期間条件。
+- sptch_trade_parameters: 取引前提条件。
+- sptch_signals: 売買シグナル条件（エントリー・エグジットのセット）。
+- sptch_entry_signals: エントリーシグナル条件の詳細（JSONB形式で具体的なロジックを格納）。
+- sptch_exit_signals: エグジットシグナル条件の詳細（JSONB形式で具体的なロジックを格納）。
+- sptch_fee_taxes: 手数料・税金条件。
+
+
+### 3. アクティビティ図
+![alt text](images/StockComapss_AD_image01.drawio.png)
+
+#### 詳細
+- 01-01:対象の銘柄の選別
+  - input sptch_stock_selections_header sptch_stock_selections_stocks sptch_simulation_periods
+  - output sptch_simulation_results_stocks
+- 02-01:EntrySignal条件のN日前を確認
+  - input sptch_signals
+- 02-02:開始日のN日前を取得
+  - input sptch_simulation_periods 
+- 02-03:ExitSignal条件のM日後を確認
+  - input sptch_exit_signals
+- 02-04:終了日のM日後を取得
+  - input sptch_simulation_periods
+- 02-05:銘柄の配列の１つ目を指定
+  - input sptch_simulation_results_stocks
+- 03-01:銘柄に対しての処理開始
+  - input sptch_simulation_results_stocks
+- 03-02:銘柄のヒストグラムが開始日のN日前、終了日のM日後を含んでいるか？
+  - input spt_daily_quotes
+- 03-03:開始日N日前、終了日M日後のデータを取得
+  - input spt_daily_quotes
+- 03-04:開始日N日前、終了日M日後のデータを取得
+  - input spt_daily_quotes
+- 03-05:開始日を基準日として評価開始
+- 04-01:基準日でのEntrySignalの評価
+  - input sptch_signals sptch_entry_signals
+- 04-02:基準日でのEntry
+  - input sptch_signals sptch_entry_signals sptch_trade_parameters
+  - output sptch_simulation_results_trade
+- 04-03:Exit日でのExit
+  - input sptch_signals sptch_exit_signals sptch_fee_taxes
+  - output sptch_simulation_results_trade
+- 04-04:評価、登録
+  - output sptch_simulation_results
+- 04-05:翌日が終了日以前
+- 05-01:次の銘柄へ
+- 06-01:終了処理、記録登録
+  - output sptch_simulation_results
+
+**進捗の保存については随時行うこととする。**
+- 対象
+  - sptch_simulation_results
+  - sptch_simulation_logs
+
+
+# 🏗 ER図イメージ
+
+```
+sptch_analysis_conditions
+├── sptch_simulation_results_stocks   ← フィルタリング銘柄結果
+├── sptch_simulation_results_trade    ← トレードシミュレーション結果
+├── sptch_simulation_results_summary  ← プラン全体の総合損益
+├── sptch_simulation_results          ← シミュレーション実行状況と全体結果
+│   └── sptch_simulation_logs         ← 各処理ステップの実行ログ
+```
+
+-----
+
+### ER図要素の説明
+
+  * **`sptch_analysis_conditions`**: 株の分析プランを定義する主要なテーブルです。
+  * **`sptch_simulation_results_stocks`**: `sptch_analysis_conditions` に基づく銘柄フィルタリングの結果を格納します。どの銘柄が投資対象になったかを記録します。
+  * **`sptch_simulation_results_trade`**: `sptch_analysis_conditions` に基づく個々の銘柄のトレードシミュレーション結果（エントリーからエグジットまで）を格納します。
+  * **`sptch_simulation_results_summary`**: `sptch_analysis_conditions` に基づくプラン全体の総合的な損益結果を格納します。
+  * **`sptch_simulation_results`**: 特定の分析プラン (`sptch_analysis_conditions`) に対するシミュレーション実行全体の状況（ステータス、開始/完了時刻、概要、エラーなど）を管理するテーブルです。
+  * **`sptch_simulation_logs`**: `sptch_simulation_results` の各シミュレーション実行における個別の処理ステップの詳細なログ（開始/完了時刻、処理時間、詳細情報など）を記録します。
+
+
+
+
+## 1 **sptch_simulation_results_stocks**
+
+→ フィルタリング結果（銘柄ごとの判定結果）
+
+| カラム名| データ型| 説明|
+| :---------------------- | :---------- | :-------------------------------------------- |
+| id  | BIGSERIAL   | 主キー   |
+| analysis_condition_id | BIGINT  | 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
+| stock_code | VARCHAR(10) | 銘柄コード |
+| filter_reason  | TEXT| 除外理由（例: 出来高不足・資本金不足・投資額オーバーなど）|
+| score   | INTEGER | 自動判定のスコア（0: 対象外、1: 対象）|
+| manual_score   | INTEGER | 手動での調整スコア（0: 対象外、1: 対象）   |
+| created_at | TIMESTAMP   | 作成日時  |
+| updated_at | TIMESTAMP   | 更新日時  |
+
+## 2 **sptch_simulation_results_trade**
+
+→ 銘柄ごとのトレードシミュレーション結果（Entry→Exit）
+
+| カラム名| データ型  | 説明|
+| :---------------------- | :------------ | :-------------------------------------------- |
+| id  | BIGSERIAL | 主キー   |
+| analysis_condition_id | BIGINT| 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
+| stock_code | VARCHAR(10)   | 銘柄コード |
+| trade_method | VARCHAR(10)   | long/short |
+| target_date| DATE  | 評価開始日（この日からシミュレーション開始）|
+| target_close_price| NUMERIC(12,2) | 評価開始日の終値（参考用） |
+| entry_date | DATE | **エントリー情報** エントリー日 |
+| entry_close_price | NUMERIC(12,2) | **エントリー情報**エントリー時の株価（終値）|
+| entry_quantity | INTEGER | **エントリー情報**エントリーした株数（100株単位など）|
+| entry_amount | NUMERIC(14,2) | **エントリー情報**エントリー時の金額（株価×数量）|
+| exit_date | DATE | **エグジット情報**エグジット日 |
+| exit_close_price | NUMERIC(12,2) | **エグジット情報**エグジット時の株価（終値）|
+| exit_quantity | INTEGER | **エグジット情報**エグジットした株数 |
+| exit_amount | NUMERIC(14,2) |**エグジット情報** エグジット時の金額 |
+| gross_profit_amount | NUMERIC(14,2) | **損益情報**税引前の利益金額 |
+| gross_profit_rate | NUMERIC(7,4) | **税引前の利益率** |
+| net_profit_amount | NUMERIC(14,2) | **損益情報**税引後の利益金額 |
+| net_profit_rate | NUMERIC(7,4) | **損益情報**税引後の利益率 |
+| created_at | TIMESTAMP | 作成日時 |
+| updated_at | TIMESTAMP | 更新日時 |
+
+---
+
+## 3 **sptch_simulation_results_summary**
+
+→ プラン全体の総合結果
+
+| カラム名| データ型  | 説明|
+| :---------------------- | :-------- | :-------------------------------------------- |
+| id  | BIGSERIAL | 主キー   |
+| analysis_condition_id | BIGINT| 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
+| gross_profit_amount | NUMERIC(14,2) | プラン全体の損益:税引前の総利益金額 |
+| gross_profit_rate | NUMERIC(7,4) | プラン全体の損益:税引前の利益率（総合）|
+| net_profit_amount | NUMERIC(14,2) | プラン全体の損益:税引後の総利益金額 |
+| net_profit_rate | NUMERIC(7,4) | プラン全体の損益:税引後の利益率（総合）|
+| created_at | TIMESTAMP | 作成日時 |
+| updated_at | TIMESTAMP | 更新日時 |
+
+---
+## 4 **sptch_simulation_results**
+
+* シミュレーションの実行状況と、その結果を保存するためのテーブル
+
+* ユーザーが「シミュレーション実施」ボタンを押すと、initiateSimulationAction がこのテーブルに新しい行を1つ作成します。この時点では、status カラムに「pending (処理待ち)」という値が入ります。
+
+* その後、バックグラウンドで動作している別のプログラム（Pythonなど）が、このテーブルを定期的にチェックし、status が「pending」の行を見つけたら、実際の重いシミュレーション計算を開始します。計算が完了したら、結果をこのテーブルの result_json や summary_json といったカラムに書き込み、status を「completed (完了)」に更新する、という流れです。
+
+
+| カラム名 | 型 | 制約 | 説明 |
+| --- | --- | --- | --- |
+| id | BIGSERIAL | PRIMARY KEY | シミュレーション結果ID (自動採番される主キー) |
+| analysis_condition_id  | BIGINT | NOT NULL, FK | 分析プランID (sptch_analysis_conditionsテーブルのIDを参照) |
+| user_id | UUID | NOT NULL, FK | ユーザーID (auth.usersテーブルのIDを参照) |
+| status | TEXT | NOT NULL, DEFAULT 'pending' | 処理ステータス (pending (保留中), running (実行中), completed (完了), failed (失敗)) |
+| summary_json | JSONB | NULL | 結果の概要 (利益率、勝率など、表示用の主要な値がJSON形式で保存されます) |
+| result_json | JSONB | NULL | 詳細なシミュレーション結果 (全取引履歴など、詳細なデータがJSON形式で保存されます) |
+| error_message | TEXT | NULL | 処理が失敗した場合のエラーメッセージ |
+| started_at | TIMESTAMPTZ | NULL | シミュレーション開始時刻 |
+| completed_at | TIMESTAMPTZ | NULL | シミュレーション完了時刻 |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | レコードが作成された日時 |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | レコードが最後に更新された日時 |
+
+
+各カラムの役割
+
+* id: このシミュレーション結果を一意に識別するためのIDです。
+* analysis_condition_id : どの分析プランに基づいたシミュレーションかを示すためのIDです。
+* user_id: どのユーザーが実行したシミュレーションかを示すためのIDです。
+    * status: シミュレーションの現在の状態を示します。
+    * pending: 処理待ち
+    * running: 処理中
+    * completed: 正常に完了
+    * failed: エラーで失敗
+* summary_json: 結果の概要（総利益率、勝率、最大ドローダウンなど）を保存します。一覧画面などで素早く表示するために使います。
+* result_json: 全ての取引履歴など、詳細なシミュレーション結果の生データを保存します。
+* error_message: statusがfailedになった場合に、その原因を記録します。
+* started_at, completed_at: 処理の開始時刻と完了時刻を記録します。
+
+## 5 **sptch_simuration_result_logs**
+| カラム名                 | 型           | 制約                      | 説明                                                              |
+|----------------------|-------------|-------------------------|-----------------------------------------------------------------|
+| id                   | BIGSERIAL   | PRIMARY KEY             | ログエントリID (自動採番される主キー)                                           |
+| simulation_result_id | BIGINT      | NOT NULL, FK            | 関連するシミュレーション結果ID (sptch_simulation_results.id を参照)              |
+| step_name            | TEXT        | NOT NULL                | 処理ステップ名 (例: data_acquisition, filtering, signal_detection_7203) |
+| status               | TEXT        | NOT NULL                | ステップのステータス (started (開始), completed (完了), failed (失敗))          |
+| started_at           | TIMESTAMPTZ | NOT NULL, DEFAULT now() | ステップ開始時刻                                                        |
+| completed_at         | TIMESTAMPTZ | NULL                    | ステップ完了時刻                                                        |
+| duration_ms          | BIGINT      | NULL                    | 処理時間 (ミリ秒単位)                                                    |
+| details              | JSONB       | NULL                    | 追加情報 (処理件数、対象銘柄など、JSON形式で保存されます)                                |
+### ログ記録のワークフロー
+この新しいテーブルは、バックグラウンドで動作するシミュレーションプログラム（Pythonなど）から利用されることを想定しています。具体的な流れは以下のようになります。
+
+#### 1.シミュレーション開始
+
+バックエンドのプログラムが sptch_simulation_results から status が pending のジョブを取得します。
+sptch_simulation_results の status を running に更新し、started_at に現在時刻を記録します。
+
+#### 2.各処理ステップのログを記録
+
+* ドキュメントのフロー図にある各処理（例：「01.02 市場データ取得処理」）の開始直前に、sptch_simulation_logs に新しいレコードを挿入します。
+
+```sql
+-- 例: 市場データ取得処理の開始ログ
+INSERT INTO sptch_simulation_logs 
+  (simulation_result_id, step_name, status) 
+VALUES 
+  (123, 'market_data_acquisition', 'started'); 
+-- 123はsptch_simulation_results.id
+```
+* 処理が完了した直後に、先ほど挿入したレコードを更新します。
+
+```sql
+-- 例: 市場データ取得処理の完了ログ
+UPDATE sptch_simulation_logs 
+SET 
+  status = 'completed', 
+  completed_at = now(),
+  duration_ms = EXTRACT(EPOCH FROM (now() - started_at)) * 1000, -- 処理時間をミリ秒で計算
+  details = '{"rows_fetched": 50000}'::jsonb
+WHERE id = (先ほど挿入したログのID);
+```
+#### 3.シミュレーション完了
+
+* 全ての処理が完了したら、sptch_simulation_results の status を completed に、completed_at に完了時刻を記録します。
+#### メリット
+この設計により、以下のことが可能になります。
+
+* パフォーマンス分析: duration_ms を集計することで、どの処理ステップが全体のボトルネックになっているかを正確に特定できます。
+* 進捗の可視化: フロントエンドでこのログテーブルをポーリング（定期的に確認）すれば、ユーザーに対して「現在、銘柄XXXのシグナルを検出中です...」といった詳細な進捗状況を表示できます。
+* エラー追跡: 処理が途中で失敗した場合、どの step_name で status が failed になったかを確認することで、エラーの原因調査が容易になります。
+この変更は主にバックエンドの処理に関するもので、ご提示いただいた initiateSimulationAction などのフロントエンド側のコードを直接変更する必要はありません。
+
+
+
+# 🚩 補足
+
+* **「stocks」→「フィルタ結果」**（この銘柄は投資対象になるか？）
+* **「trade」→「個別のEntry/Exit」**（売買の実行と結果）
+* **「summary」→「プランの総合利益」**（最終的な成績）
+
+---
+
+<details>
+<summary>DDL</summmary>
+
+```SQL
+
+CREATE TABLE sptch_simulation_results_stocks (
+    id BIGSERIAL PRIMARY KEY,
+    analysis_condition_id BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
+    stock_code VARCHAR(10) NOT NULL,
+    filter_reason TEXT,
+    score INTEGER NOT NULL DEFAULT 0,
+    manual_score INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- インデックス（検索高速化）
+CREATE INDEX idx_srs_analysis_stock ON sptch_simulation_results_stocks(analysis_condition_id, stock_code);
+
+
+CREATE TABLE sptch_simulation_results_trade (
+    id BIGSERIAL PRIMARY KEY,
+    analysis_condition_id  BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
+    stock_code VARCHAR(10) NOT NULL,
+    trade_method VARCHAR(10) NOT NULL,
+    target_date DATE NOT NULL,
+    target_close_price NUMERIC(12,2),
+
+    -- Entry
+    entry_date DATE,
+    entry_close_price NUMERIC(12,2),
+    entry_quantity INTEGER,
+    entry_amount NUMERIC(14,2),
+    
+    -- Exit
+    exit_date DATE,
+    exit_close_price NUMERIC(12,2),
+    exit_quantity INTEGER,
+    exit_amount NUMERIC(14,2),
+    
+    -- Profit
+    gross_profit_amount NUMERIC(14,2),
+    gross_profit_rate NUMERIC(7,4),
+    net_profit_amount NUMERIC(14,2),
+    net_profit_rate NUMERIC(7,4),
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- インデックス
+CREATE INDEX idx_srt_analysis_stock_date 
+    ON sptch_simulation_results_trade(analysis_condition_id, stock_code, target_date);
+
+
+CREATE TABLE sptch_simulation_results_summary (
+    id BIGSERIAL PRIMARY KEY,
+    analysis_condition_id  BIGINT NOT NULL UNIQUE REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
+
+    gross_profit_amount NUMERIC(14,2),
+    gross_profit_rate NUMERIC(7,4),
+    net_profit_amount NUMERIC(14,2),
+    net_profit_rate NUMERIC(7,4),
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE public.sptch_simulation_results (
+    id BIGSERIAL PRIMARY KEY,
+    analysis_condition_id BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', -- pending, running, completed, failed
+    summary_json JSONB NULL,
+    result_json JSONB NULL,
+    error_message TEXT NULL,
+    started_at TIMESTAMPTZ NULL,
+    completed_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- コメント
+COMMENT ON COLUMN public.sptch_simulation_results.id IS 'シミュレーション結果ID';
+COMMENT ON COLUMN public.sptch_simulation_results.analysis_condition_id IS '分析プランID (sptch_analysis_conditions.id)';
+COMMENT ON COLUMN public.sptch_simulation_results.user_id IS 'ユーザーID';
+COMMENT ON COLUMN public.sptch_simulation_results.status IS '処理ステータス (pending, running, completed, failed)';
+COMMENT ON COLUMN public.sptch_simulation_results.summary_json IS '結果の概要 (利益率、勝率など表示用の主要な値)';
+COMMENT ON COLUMN public.sptch_simulation_results.result_json IS '詳細なシミュレーション結果 (全取引履歴など)';
+COMMENT ON COLUMN public.sptch_simulation_results.error_message IS '処理が失敗した場合のエラーメッセージ';
+COMMENT ON COLUMN public.sptch_simulation_results.started_at IS 'シミュレーション開始時刻';
+COMMENT ON COLUMN public.sptch_simulation_results.completed_at IS 'シミュレーション完了時刻';
+
+-- バックエンドのワーカーが効率的に処理待ちのジョブを見つけられるように、statusカラムにインデックスを作成します。
+CREATE INDEX idx_sptch_simulation_results_status ON public.sptch_simulation_results(status);
+
+
+CREATE TABLE public.sptch_simulation_logs (
+    id BIGSERIAL PRIMARY KEY,
+    simulation_result_id BIGINT NOT NULL,
+    step_name TEXT NOT NULL,
+    status TEXT NOT NULL, -- 'started', 'completed', 'failed'
+    started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at TIMESTAMPTZ,
+    duration_ms BIGINT,
+    details JSONB,
+    CONSTRAINT fk_simulation_result FOREIGN KEY (simulation_result_id) REFERENCES public.sptch_simulation_results(id) ON DELETE CASCADE
+);
+
+COMMENT ON TABLE public.sptch_simulation_logs IS 'シミュレーションの各処理ステップの実行ログ';
+COMMENT ON COLUMN public.sptch_simulation_logs.id IS 'ログエントリID';
+COMMENT ON COLUMN public.sptch_simulation_logs.simulation_result_id IS '関連するシミュレーション結果ID (sptch_simulation_results.id)';
+COMMENT ON COLUMN public.sptch_simulation_logs.step_name IS '処理ステップ名 (例: data_acquisition, filtering, signal_detection_7203)';
+COMMENT ON COLUMN public.sptch_simulation_logs.status IS 'ステップのステータス (started, completed, failed)';
+COMMENT ON COLUMN public.sptch_simulation_logs.started_at IS 'ステップ開始時刻';
+COMMENT ON COLUMN public.sptch_simulation_logs.completed_at IS 'ステップ完了時刻';
+COMMENT ON COLUMN public.sptch_simulation_logs.duration_ms IS '処理時間 (ミリ秒)';
+COMMENT ON COLUMN public.sptch_simulation_logs.details IS '追加情報 (処理件数、対象銘柄など)';
+
+-- 特定のシミュレーション結果に関連するログを高速に検索するためのインデックス
+CREATE INDEX idx_sptch_simulation_logs_result_id ON public.sptch_simulation_logs(simulation_result_id);
+
+
+ALTER TABLE public.sptch_simulation_results_stocks DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sptch_simulation_results_trade DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sptch_simulation_results_summary DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sptch_simulation_results DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sptch_simulation_logs DISABLE ROW LEVEL SECURITY;
+
+-- ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO authenticated;
+-- ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO anon;
+
+-- 既存のすべてのシーケンスに対して権限を付与
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- 今後 public スキーマで作成されるすべてのシーケンスに対してデフォルトの権限を付与
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO authenticated;
+```
+
+</details>
 
 ### 3. ServerFunction (SQL関数例)
 PostgreSQLの関数例として、株価の仮説分析を行うための関数です。フロントエンドから呼び出され、動的なパラメータと日付範囲に基づいて、仮説の前提条件の達成状況、結果条件の達成状況、および各分析ポイントの詳細な情報をテーブル形式で返します。
+
 
 <details>
 <summary>StockCode0002関数 (PostgreSQL)</summary>
@@ -4149,172 +5445,6 @@ $$;
 ```
 </details>
 
-4. 特徴量の作成（Feature Engineering）
-株価毎に、仮説に対しての実現率を調査するために使用する特徴量です。
-
-起点（株購入時点）の変数A日前（3日前など）。
-
-起点（株購入時点）と変数A日前での値上がり率：変数B%（3%など）。
-
-起点（株購入時点）の変数C日後（10日後など）。
-
-起点（株購入時点）と変数C日後での値上がり率：変数D%（10%など）。
-
-5. ラベリング（必要に応じて）
-分類問題（上がる/下がる） → ラベル（1:上昇, 0:下降）を付ける
-
-
-
-## ① **sptch_simulation_results_stocks**
-
-→ フィルタリング結果（銘柄ごとの判定結果）
-
-| カラム名| データ型| 説明|
-| :---------------------- | :---------- | :-------------------------------------------- |
-| id  | BIGSERIAL   | 主キー   |
-| analysis_condition_id | BIGINT  | 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
-| stock_code | VARCHAR(10) | 銘柄コード |
-| filter_reason  | TEXT| 除外理由（例: 出来高不足・資本金不足・投資額オーバーなど）|
-| score   | INTEGER | 自動判定のスコア（0: 対象外、1: 対象）|
-| manual_score   | INTEGER | 手動での調整スコア（0: 対象外、1: 対象）   |
-| created_at | TIMESTAMP   | 作成日時  |
-| updated_at | TIMESTAMP   | 更新日時  |
-
-## ② **sptch_simulation_results_trade**
-
-→ 銘柄ごとのトレードシミュレーション結果（Entry→Exit）
-
-| カラム名| データ型  | 説明|
-| :---------------------- | :------------ | :-------------------------------------------- |
-| id  | BIGSERIAL | 主キー   |
-| analysis_condition_id | BIGINT| 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
-| stock_code | VARCHAR(10)   | 銘柄コード |
-| target_date| DATE  | 評価開始日（この日からシミュレーション開始）|
-| target_close_price| NUMERIC(12,2) | 評価開始日の終値（参考用） |
-| entry_date | DATE | **エントリー情報** エントリー日 |
-| entry_close_price | NUMERIC(12,2) | **エントリー情報**エントリー時の株価（終値）|
-| entry_quantity | INTEGER | **エントリー情報**エントリーした株数（100株単位など）|
-| entry_amount | NUMERIC(14,2) | **エントリー情報**エントリー時の金額（株価×数量）|
-| exit_date | DATE | **エグジット情報**エグジット日 |
-| exit_close_price | NUMERIC(12,2) | **エグジット情報**エグジット時の株価（終値）|
-| exit_quantity | INTEGER | **エグジット情報**エグジットした株数 |
-| exit_amount | NUMERIC(14,2) |**エグジット情報** エグジット時の金額 |
-| gross_profit_amount | NUMERIC(14,2) | **損益情報**税引前の利益金額 |
-| gross_profit_rate | NUMERIC(7,4) | **税引前の利益率** |
-| net_profit_amount | NUMERIC(14,2) | **損益情報**税引後の利益金額 |
-| net_profit_rate | NUMERIC(7,4) | **損益情報**税引後の利益率 |
-| created_at | TIMESTAMP | 作成日時 |
-| updated_at | TIMESTAMP | 更新日時 |
-
----
-
-## ③ **sptch_simulation_results_summary**（新規）
-
-→ プラン全体の総合結果
-
-| カラム名| データ型  | 説明|
-| :---------------------- | :-------- | :-------------------------------------------- |
-| id  | BIGSERIAL | 主キー   |
-| analysis_condition_id | BIGINT| 分析プランID（`sptch_analysis_conditions.id`への外部キー） |
-| gross_profit_amount | NUMERIC(14,2) | プラン全体の損益:税引前の総利益金額 |
-| gross_profit_rate | NUMERIC(7,4) | プラン全体の損益:税引前の利益率（総合）|
-| net_profit_amount | NUMERIC(14,2) | プラン全体の損益:税引後の総利益金額 |
-| net_profit_rate | NUMERIC(7,4) | プラン全体の損益:税引後の利益率（総合）|
-| created_at | TIMESTAMP | 作成日時 |
-| updated_at | TIMESTAMP | 更新日時 |
-
----
-
-# 🏗 ER図イメージ
-
-```
-sptch_analysis_conditions
-├── sptch_simulation_results_stocks   ← フィルタリング銘柄結果
-├── sptch_simulation_results_trade    ← トレードシミュレーション結果
-└── sptch_simulation_results_summary  ← プラン全体の総合損益
-```
-
----
-
-# 🚩 補足
-
-* **「stocks」→「フィルタ結果」**（この銘柄は投資対象になるか？）
-* **「trade」→「個別のEntry/Exit」**（売買の実行と結果）
-* **「summary」→「プランの総合利益」**（最終的な成績）
-
----
-
-<details><summary>DDL</summmary>
-
-```SQL
-
-CREATE TABLE sptch_simulation_results_stocks (
-    id BIGSERIAL PRIMARY KEY,
-    analysis_condition_id BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
-    stock_code VARCHAR(10) NOT NULL,
-    filter_reason TEXT,
-    score INTEGER NOT NULL DEFAULT 0,
-    manual_score INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- インデックス（検索高速化）
-CREATE INDEX idx_srs_analysis_stock ON sptch_simulation_results_stocks(analysis_condition_id, stock_code);
-
-
-CREATE TABLE sptch_simulation_results_trade (
-    id BIGSERIAL PRIMARY KEY,
-    analysis_condition_id BIGINT NOT NULL REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
-    stock_code VARCHAR(10) NOT NULL,
-    target_date DATE NOT NULL,
-    target_close_price NUMERIC(12,2),
-    
-    -- Entry
-    entry_date DATE,
-    entry_close_price NUMERIC(12,2),
-    entry_quantity INTEGER,
-    entry_amount NUMERIC(14,2),
-    
-    -- Exit
-    exit_date DATE,
-    exit_close_price NUMERIC(12,2),
-    exit_quantity INTEGER,
-    exit_amount NUMERIC(14,2),
-    
-    -- Profit
-    gross_profit_amount NUMERIC(14,2),
-    gross_profit_rate NUMERIC(7,4),
-    net_profit_amount NUMERIC(14,2),
-    net_profit_rate NUMERIC(7,4),
-
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- インデックス
-CREATE INDEX idx_srt_analysis_stock_date 
-    ON sptch_simulation_results_trade(analysis_condition_id, stock_code, target_date);
-
-
-CREATE TABLE sptch_simulation_results_summary (
-    id BIGSERIAL PRIMARY KEY,
-    analysis_condition_id BIGINT NOT NULL UNIQUE REFERENCES sptch_analysis_conditions(id) ON DELETE CASCADE,
-
-    gross_profit_amount NUMERIC(14,2),
-    gross_profit_rate NUMERIC(7,4),
-    net_profit_amount NUMERIC(14,2),
-    net_profit_rate NUMERIC(7,4),
-
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-```
-
-</details>
-
-
 ---
 
 # 04_AnalyzeResults.md
@@ -4326,6 +5456,7 @@ CREATE TABLE sptch_simulation_results_summary (
 * **定義：** 選ばれたPlanに対応する結果を確認、結果もとに、Planが妥当かどうかを判断する
 * **役割：** バックテストで生成された詳細なデータ（損益グラフ、各トレードの詳細履歴、パフォーマンス指標など）をユーザーが視覚的・数値的に把握し、仮説の有効性を判断するための機能が含まれます。
 
+
 ## 機能詳細
 
 ### 1. 検証結果の確認ワークフロー
@@ -4333,47 +5464,61 @@ GenerateResultPlanで生成されたシミュレーション結果を確認し�
 
 ![検証プラン作成→プラン登録→検証結果確認まで](images/StockCompass_UC_image02.drawio.png)
 
-* **Step9：利用者：「検証結果（損益）」を参照する。**
+* **結果参照**
     * ユーザーは、シミュレーションによって算出された最終損益や損益発生日などの結果を参照します。
-    * 必要であれば、Step1, Step2, Step3などに戻って再度評価を行い、プランを改善します。
+    * 必要であれば、プランの見直しなどを実施する。
 
 ### 2. 目的の明確化と結果の評価
-StockCompassの目的である「市場の動向を過去のデータをベースに分析する」ための具体的な予測目標と、その達成状況を評価します。
+StockCompassの目的である「市場の動向を過去のデータをベースに分析し、投資するためのシグナルをキャッチするためのＰｌａｎを作成する」の中で、妥当な、プランかどうかを判断するための処理
 
-* **何を予測したいのか？**
-    * 14日後のトレンド。
-    * 起点後株価の変動率10%以上の銘柄を探す。
+- プランに基づいた結果が期待した値になっているかの確認・
+- 期待通りに動かないときは原因を選別できること。その情報に基づいてプランを再作成する。
 
-### 3. 可視化・レポート化
-生成された結果データに基づき、より正確に近いデータを確認できるように視覚的なレポートや詳細な数値レポートを提供します。
+### 3. 画面
+- 生成された分析レポートを元に、妥当なプランかどうかを判断する役割を担う
+- 生成された分析レポートは「」「」に保存される。
+- 実際にプランに基づいて、取引を実施したとして、その成果を確認する
+  - 合計しての損益の状態、課税前の損益、課税後の損益が確認できる。
+- タブを選択することでプランの情報、銘柄一覧、取引一覧、ログが確認できる
+  - プランの情報
+    - 現状のプランの画面が提示されること　確認画面と同じ内容を想定
+  - 銘柄一覧
+    - 保存された内容を比較するために、詳細銘柄単位での状況の記載
+    - 対象の銘柄が、別の要因（出来高などではじかれた）なども確認できる。
+    - 対象の銘柄が、いつトレース開始でいつトレース終了か確認できる。
+    - 実際の時系列のチャートへの遷移を持つ
+    - プランの株すべてが対象で、それに対してはじかれた理由を提示すること
+      - 出来高が少ないや、エントリーサイン見つからないなど
+  - 取引一覧
+    - 各々の取引したと仮定した実績として銘柄単位で以下のことが確認できる
+      - トレード開始日時。株価、株数、金額、
+      - トレース終了日時、株価、株数、金額、
+        - トレース開始日からトレード終了日での金額の差分を損益とする。
+      - プラン通り実施したとしてのトレード終了後の課税前損益、課税後損益、課税前履歴率、課税後利益率
+    - 実際の時系列のチャートへの遷移可能
+  - ログ画面
+    - 各々の処理でどれだけ時間が掛かったか確認できること
+    - 銘柄単位での時間
+    - 実際にエントリーシグナル探知後の計算処理時間などをログから表示する
+    - 特にAPIへのリクエストと結果受領までの時間は確認できる必要あり。
 
-* **結果の可視化:** 損益推移グラフ、個別の取引履歴チャート表示、シグナル発生箇所のマークなど。
-* **パフォーマンス指標:** 総損益、勝率、最大ドローダウン、平均利益率、平均損失率などの主要なバックテスト指標。
-* 変数に応じて、より正確に近いデータを確認できるようにします。
 
-### 関連する画面
-* **7. 検証結果（損益）詳細画面:**
-    * シグナル発生/売却日時・株価の表示。
-    * 損益額/率の表示。
-    * 検証条件概要の表示。
-    * グラフ表示（オプション）。
-    * 前画面に戻るボタン。
-    * 
-### 実行履歴　プラン選択後
-*ヘッダ
-  * 作成日時、作成者、名前、メモ
-		銘柄
-    銘柄（スクリーニング後）
-		スクリーニング、期間、SL
-* 一覧
+## 画面
+### ヘッダー
+![header](images/StockCompass_04_uiheader_02.drawio.png)
 
-|起点日|銘柄| | |PERVIEW| |ENTRY| | | |EXIT| | | |RESULT| |RESULT(F)| |チャート参照|
-|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|
-| |銘柄|名前|市場|DATE|CLOSE|DATE|CLOSE|VOLUME|PRICE|DATE|CLOSE|VOLUME|PRICE|PROFIT|P-M|PROFIT|P-M| |
-|2025-01-10|1234|xxx商事|ｘｘｘｘ|2025-01-07|1,222|2025-01-10|1,240|200|248,000|2025-01-15|1,300|200|260,000|12000|5%|12000|4%|チャート参照|
-|2025-02-08|1235|yyy商事|ｘｘｘｘ|2025-02-06|2,200|2025-02-08|2,300|100|230,000|2025-01-15|2,500|100|250,000|20000|9%|20000|8%|チャート参照|
-|2025-02-10|9001|zzz商事|ｘｘｘｘ|2025-02-07|1,001|2025-02-10|1,201|200|240,200|2025-01-15|1,500|200|300,000|59800|-25%|59800|-25%|チャート参照|
-|2025-03-10|9002|vvvvv|ｘｘｘｘ|2025-03-07|300|2025-03-10|340|600|204,000|2025-01-15|370|600|222,000|18000|-9%|18000|-9%|チャート参照|
+### サマリ
+![Summary](images/StockCompass_04_ui_01.drawio.png)
+
+### トレード
+![Trade](images/StockCompass_04_ui_03.drawio.png)
+
+### 銘柄
+![Stock](images/StockCompass_04_ui_04.drawio.png)
+
+### ログ
+![Stock](images/StockCompass_04_ui_05.drawio.png)
+
 
 ---
 
@@ -4609,6 +5754,95 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "public" TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "public" TO anon;
 
 ```
+
+
+---
+
+# 04_AnalyzeResults.md
+
+# 04_AnalyzeResults: プラン結果分析
+
+## 役割の説明
+### AnalyzeResults（プラン結果分析）
+* **定義：** 選ばれたPlanに対応する結果を確認、結果もとに、Planが妥当かどうかを判断する
+* **役割：** バックテストで生成された詳細なデータ（損益グラフ、各トレードの詳細履歴、パフォーマンス指標など）をユーザーが視覚的・数値的に把握し、仮説の有効性を判断するための機能が含まれます。
+
+## 機能詳細
+
+### 1. 検証結果の確認ワークフロー
+GenerateResultPlanで生成されたシミュレーション結果を確認し、分析します。
+
+![検証プラン作成→プラン登録→検証結果確認まで](images/StockCompass_UC_image02.drawio.png)
+
+* **結果参照**
+    * ユーザーは、シミュレーションによって算出された最終損益や損益発生日などの結果を参照します。
+    * 必要であれば、プランの見直しなどを実施する。
+
+### 2. 目的の明確化と結果の評価
+StockCompassの目的である「市場の動向を過去のデータをベースに分析し、投資するためのシグナルをキャッチするためのＰｌａｎを作成する」の中で、妥当な、プランかどうかを判断するための処理
+
+- プランに基づいた結果が期待した値になっているかの確認・
+- 期待通りに動かないときは原因を選別できること。その情報に基づいてプランを再作成する。
+
+### 3. 画面
+- 生成された分析レポートを元に、妥当なプランかどうかを判断する役割を担う
+- 生成された分析レポートは「」「」に保存される。
+- 実際にプランに基づいて、取引を実施したとして、その成果を確認する
+  - 合計しての損益の状態、課税前の損益、課税後の損益が確認できる。
+- タブを選択することでプランの情報、銘柄一覧、取引一覧、ログが確認できる
+  - プランの情報
+    - 現状のプランの画面が提示されること　確認画面と同じ内容を想定
+  - 銘柄一覧
+    - 保存された内容を比較するために、詳細銘柄単位での状況の記載
+    - 対象の銘柄が、別の要因（出来高などではじかれた）なども確認できる。
+    - 対象の銘柄が、いつトレース開始でいつトレース終了か確認できる。
+    - 実際の時系列のチャートへの遷移を持つ
+    - プランの株すべてが対象で、それに対してはじかれた理由を提示すること
+      - 出来高が少ないや、エントリーサイン見つからないなど
+  - 取引一覧
+    - 各々の取引したと仮定した実績として銘柄単位で以下のことが確認できる
+      - トレード開始日時。株価、株数、金額、
+      - トレース終了日時、株価、株数、金額、
+        - トレース開始日からトレード終了日での金額の差分を損益とする。
+      - プラン通り実施したとしてのトレード終了後の課税前損益、課税後損益、課税前履歴率、課税後利益率
+    - 実際の時系列のチャートへの遷移可能
+  - ログ画面
+    - 各々の処理でどれだけ時間が掛かったか確認できること
+    - 銘柄単位での時間
+    - 実際にエントリーシグナル探知後の計算処理時間などをログから表示する
+    - 特にAPIへのリクエストと結果受領までの時間は確認できる必要あり。
+
+
+ 
+### 主な画面構成
+-ヘッダ
+  - 作成日時、作成者、名前、メモ
+  - プラン名称
+  - プラン合計での収益
+    - 課税前、課税後
+  - 条件：銘柄数２０、トレード数１５、期間２０２１/２/１４ー２０２１/５/１４
+  - 投資した金額の合計
+  - 投資した銘柄数、銘柄当たりの平均
+
+- タブ内・取引一覧
+
+|起点日|銘柄| | |PERVIEW| |ENTRY| | | |EXIT| | | |RESULT| |RESULT(F)| |チャート参照|
+|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|:----|
+| |銘柄|名前|市場|DATE|CLOSE|DATE|CLOSE|VOLUME|PRICE|DATE|CLOSE|VOLUME|PRICE|PROFIT|P-M|PROFIT|P-M| |
+|2025-01-10|1234|xxx商事|ｘｘｘｘ|2025-01-07|1,222|2025-01-10|1,240|200|248,000|2025-01-15|1,300|200|260,000|12000|5%|12000|4%|チャート参照|
+|2025-02-08|1235|yyy商事|ｘｘｘｘ|2025-02-06|2,200|2025-02-08|2,300|100|230,000|2025-01-15|2,500|100|250,000|20000|9%|20000|8%|チャート参照|
+|2025-02-10|9001|zzz商事|ｘｘｘｘ|2025-02-07|1,001|2025-02-10|1,201|200|240,200|2025-01-15|1,500|200|300,000|59800|-25%|59800|-25%|チャート参照|
+|2025-03-10|9002|vvvvv|ｘｘｘｘ|2025-03-07|300|2025-03-10|340|600|204,000|2025-01-15|370|600|222,000|18000|-9%|18000|-9%|チャート参照|
+
+- タブ内・銘柄一覧
+
+| 対象 | コード | 銘柄名       | 市場 | 株価  | 最低株数 | 最適購入金額 | 資産       | 理由             |
+|------|--------|--------------|------|-------|----------|--------------|------------|------------------|
+| ×    | 1244   | ｘｘｘ商事   |      | 12000 | 100      | 1200000      | 90,000百万 | 上限金額オーバー |
+| ×    | 1333   | ｘｘｘ自動車 |      | 300   | 100      | 30000        | ４0百万    | 資本金NG         |
+| 〇   | 9801   | 日本××       |      | 500   | 100      | 50000        | 200百万    | ー               |
+| 〇   | 9811   | NTN          |      | 150   | 100      | 15000        | 300百万    | ー               |
+
 
 
 ---

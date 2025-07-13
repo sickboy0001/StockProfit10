@@ -2,15 +2,15 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation"; // ★ useRouterをインポート
 import { Button } from "@/components/ui/button"; // shadcn/uiのButton
 import { Input } from "@/components/ui/input"; // shadcn/uiのInput
 import { DatePicker } from "@/components/ui/date-picker"; // 仮にDate Pickerがあるとして
 import { DailyQuote } from "@/types/yFinance";
 import { CompanyInfo } from "@/types/company"; // 企業情報型をインポート
 import { dif_get_api_years } from "@/constants/common";
-import { readAndRegistStockInfo } from "@/app/actions/readAndRegistStockInfo";
-import { useRouter } from "next/navigation"; // ★ useRouterをインポート
 import { Checkbox } from "@/components/ui/checkbox"; // ★ Checkboxをインポート
+import { readAndRegistCompanyDailyQuotesEntry } from "@/app/actions/readAndRegistEntry";
 
 export default function ActionYApiAndRegist() {
   const router = useRouter(); // ★ routerインスタンスを取得
@@ -54,7 +54,7 @@ export default function ActionYApiAndRegist() {
 
     try {
       // ★ サーバーアクションを呼び出し
-      const result = await readAndRegistStockInfo(
+      const result = await readAndRegistCompanyDailyQuotesEntry(
         symbol,
         startDate.toISOString().split("T")[0],
         endDate.toISOString().split("T")[0]
@@ -112,7 +112,7 @@ export default function ActionYApiAndRegist() {
         errorMessage = `サーバー処理エラー: ${err}`;
       }
       setAllError((prev) => (prev ? `${prev}\n${errorMessage}` : errorMessage));
-      console.error("Error calling readAndRegistStockInfo server action:", err);
+      console.error("Error calling readAndRegistEntry server action:", err);
     } finally {
       setIsLoadingAll(false);
     }

@@ -1,7 +1,13 @@
 // src/components/domain/Stock/StockChart.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useLayoutEffect,
+} from "react";
 import {
   createChart,
   ColorType,
@@ -12,7 +18,7 @@ import {
 import { ChartData } from "@/types/stock"; // DailyQuoteとChartDataの型定義は既存のものを使用
 import { calculateAllMovingAverages } from "./analysis/movingAverage";
 import { useStockQuotes } from "./api/stockApi";
-import { format, isValid, subMonths } from "date-fns"; // 日付フォーマット用
+import { format } from "date-fns"; // 日付フォーマット用
 import EntryRecordViswHistory from "./EntryRecordViswHistory";
 import { showCustomToast } from "@/components/organisms/CustomToast"; // ★ CustomToastをインポート
 
@@ -48,7 +54,14 @@ const StockChartView: React.FC<StockChartProps> = ({
   // カスタムツールチップのRef
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [tooltipContent, setTooltipContent] = useState<ChartData | null>(null);
+  // ★ ツールチップの最終的な表示位置を管理するstate
   const [tooltipPosition, setTooltipPosition] = useState<{
+    left: number;
+    top: number;
+    visible: boolean;
+  } | null>(null);
+  // ★ マウスの生の座標を管理するstate
+  const [rawMousePosition, setRawMousePosition] = useState<{
     x: number;
     y: number;
   } | null>(null);
@@ -58,8 +71,8 @@ const StockChartView: React.FC<StockChartProps> = ({
     isLoading,
     isError,
     error,
-    registrationResult, // ★ readAndRegistStockInfoの結果を受け取る
-    isRegistering, // ★ readAndRegistStockInfoの実行状態を受け取る
+    registrationResult,
+    isRegistering,
   } = useStockQuotes({
     stockCode: stockCode,
     startDate: startDate,
@@ -70,11 +83,19 @@ const StockChartView: React.FC<StockChartProps> = ({
     // quotes が配列であり、要素を持つことを確認
     if (!Array.isArray(quotes) || quotes.length === 0) return [];
 
-    const calculatedData = calculateAllMovingAverages(quotes, [20, 60]);
-    // console.log(
-    //   "First 5 chartData items:",
-    //   JSON.stringify(calculatedData.slice(0, 5), null, 2)
-    // ); // ★ ログ追加
+    // ★★★ 修正箇所 ★★★
+    // チャートライブラリに渡す前に、無効なデータ(null)を除外します。
+    // これにより "must be a number, got=object, value=null" エラーを防ぎます。
+    const cleanedQuotes = quotes.filter(
+      (q) =>
+        q.open !== null &&
+        q.high !== null &&
+        q.low !== null &&
+        q.close !== null &&
+        q.volume !== null // 出来高もチェック
+    );
+
+    const calculatedData = calculateAllMovingAverages(cleanedQuotes, [20, 60]);
     return calculatedData;
   }, [quotes]);
 
@@ -169,6 +190,7 @@ const StockChartView: React.FC<StockChartProps> = ({
           const date = new Date((time as number) * 1000); // Lightweight ChartsのtimeはUnixタイムスタンプ
           return format(date, "yyyy/MM/dd");
         },
+        // rightOffset: 30, // ★ setLogicalRangeで表示範囲を直接制御するため、このオプションは不要になります
       },
       crosshair: {
         mode: 0, // Normal mode
@@ -273,14 +295,14 @@ const StockChartView: React.FC<StockChartProps> = ({
         );
         if (dataPoint) {
           setTooltipContent(dataPoint);
-          setTooltipPosition({ x: param.point.x + 10, y: param.point.y + 10 });
+          setRawMousePosition({ x: param.point.x, y: param.point.y });
         } else {
           setTooltipContent(null);
-          setTooltipPosition(null);
+          setRawMousePosition(null);
         }
       } else {
         setTooltipContent(null);
-        setTooltipPosition(null);
+        setRawMousePosition(null);
       }
     });
 
@@ -295,6 +317,52 @@ const StockChartView: React.FC<StockChartProps> = ({
       resizeObserver.unobserve(container);
     };
   }, []);
+
+  // ★ useLayoutEffect を使用して、DOM更新後の同期的な位置計算を保証
+  useLayoutEffect(() => {
+    if (
+      !rawMousePosition ||
+      !tooltipContent ||
+      !tooltipRef.current ||
+      !chartContainerRef.current
+    ) {
+      // ★ 表示位置情報を隠す
+      if (tooltipPosition?.visible) {
+        setTooltipPosition({ ...tooltipPosition, visible: false });
+      }
+      return;
+    }
+
+    const chartRect = chartContainerRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+
+    const { x: mouseX, y: mouseY } = rawMousePosition;
+    const margin = 15; // カーソルからのマージン
+
+    let left = mouseX + margin;
+    let top = mouseY + margin;
+
+    // 右端からはみ出るかチェックし、はみ出るなら左側に表示
+    if (left + tooltipRect.width > chartRect.width) {
+      left = mouseX - tooltipRect.width - margin;
+    }
+
+    // 下端からはみ出るかチェックし、はみ出るなら上側に表示
+    if (top + tooltipRect.height > chartRect.height) {
+      top = mouseY - tooltipRect.height - margin;
+    }
+
+    // 念のため、左端・上端からはみ出ないように最終調整
+    if (left < 0) {
+      left = 0;
+    }
+    if (top < 0) {
+      top = 0;
+    }
+
+    // ★ 計算した位置と表示フラグをセット
+    setTooltipPosition({ left, top, visible: true });
+  }, [rawMousePosition, tooltipContent, tooltipPosition]); // 依存配列にrawMousePositionとtooltipContentを追加
 
   // データが更新されたときにチャートにセット
   useEffect(() => {
@@ -385,49 +453,27 @@ const StockChartView: React.FC<StockChartProps> = ({
 
     // データがロードされたら、チャートを最新のデータ範囲にフィットさせる
     if (chartRef.current) {
-      // 初期表示範囲を直近6ヶ月に設定、データがなければ全期間
-      if (chartRef.current && candlestickData.length > 0) {
+      // データがロードされたら、表示範囲を調整します。
+      // 初期表示は直近約6ヶ月とし、右側にスペースを確保します。
+      if (candlestickData.length > 0) {
         const timeScale = chartRef.current.timeScale();
-        const latestDataPoint = candlestickData[candlestickData.length - 1];
+        const dataLength = candlestickData.length;
 
-        if (latestDataPoint && latestDataPoint.time) {
-          // const latestTime = latestDataPoint.time as number; // Unix timestamp (seconds)
-          const latestTime = latestDataPoint.time; // This is already of type Time (UTCTimestamp)
-          const sixMonthsAgoDate = subMonths(
-            new Date((latestTime as number) * 1000),
-            diff_disp_month
-          );
+        // 表示したい期間（約6ヶ月）をバーの数に換算します。
+        // 1ヶ月あたり約20営業日と仮定します。
+        const visibleBars = diff_disp_month * 20;
 
-          // const sixMonthsAgoDate = subMonths(new Date(latestTime * 1000), 6);
+        // 表示開始のインデックスを計算します。データ数が足りない場合は最初から表示します。
+        const fromIndex = Math.max(0, dataLength - visibleBars);
 
-          if (isValid(sixMonthsAgoDate)) {
-            // const sixMonthsAgoTime = sixMonthsAgoDate.getTime() / 1000;
-            // const firstDataTime = candlestickData[0].time as number;
+        // 表示終了のインデックスは、最後のバーにオフセットを加えた位置です。
+        // このオフセットが右側のスペースになります。
+        const toIndex = dataLength - 1 + 10; // 30バー分のスペース
 
-            const sixMonthsAgoTime = (sixMonthsAgoDate.getTime() /
-              1000) as Time; // Cast to Time (UTCTimestamp)
-            const firstDataTime = candlestickData[0].time; // This is already of type Time (UTCTimestamp)
-
-            if (sixMonthsAgoTime > firstDataTime) {
-              // 6ヶ月前のデータが存在する場合
-              timeScale.setVisibleRange({
-                from: sixMonthsAgoTime,
-                to: latestTime,
-              });
-            } else {
-              // データが6ヶ月未満の場合は全期間表示
-              timeScale.fitContent();
-            }
-          } else {
-            // 日付計算が無効な場合は全期間表示
-            timeScale.fitContent();
-          }
-        } else {
-          // 最新のデータポイントがない場合は全期間表示
-          timeScale.fitContent();
-        }
-      } else if (chartRef.current) {
-        // データが全くない場合は何もしないか、デフォルトの挙動に任せる
+        timeScale.setVisibleLogicalRange({
+          from: fromIndex,
+          to: toIndex,
+        });
       }
     }
   }, [chartData]); // chartDataが変更されたときに実行
@@ -470,14 +516,14 @@ const StockChartView: React.FC<StockChartProps> = ({
           style={{ height: "400px", width: "100%" }}
         >
           {/* カスタムツールチップ */}
-          {tooltipContent && tooltipPosition && (
+          {tooltipContent && (
             <div
               ref={tooltipRef}
-              className="absolute bg-white p-2 border border-gray-300 shadow-md pointer-events-none"
+              className="absolute bg-white p-2 border border-gray-300 shadow-md pointer-events-none whitespace-nowrap" // whitespace-nowrap は引き続き重要です
               style={{
-                left: tooltipPosition.x,
-                top: tooltipPosition.y,
-                transform: "translate(-50%, -100%)", // マウスの上に表示されるように調整
+                left: `${tooltipPosition?.left ?? 0}px`,
+                top: `${tooltipPosition?.top ?? 0}px`,
+                visibility: tooltipPosition?.visible ? "visible" : "hidden",
                 zIndex: 10,
               }}
             >

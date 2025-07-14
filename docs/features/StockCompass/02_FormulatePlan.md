@@ -100,3 +100,167 @@
 * **`sptch_entry_signals`**: エントリーシグナル条件の詳細（JSONB形式で具体的なロジックを格納）。
 * **`sptch_exit_signals`**: エグジットシグナル条件の詳細（JSONB形式で具体的なロジックを格納）。
 * **`sptch_fee_taxes`**: 手数料・税金条件。
+
+
+#### 1\. `sptch_analysis_conditions`
+
+  * **分析条件のメインテーブル**
+  * シミュレーションや予測に使う分析条件セット全体を定義し、各サブ条件への参照を保持します。
+
+| カラム名 | データ型| 制約    | 説明    |
+|:-----------------------------|:-----------------------|:----------------------------|:----------------------------------------------------------|
+| `id`| `BIGSERIAL` / `INTEGER` | `PRIMARY KEY`| 条件セットの一意のID (自動採番)  |
+| `user_id`| `UUID`  | `NOT NULL`   | 条件を作成したユーザーのID (認証ユーザー)  |
+| `name`   | `TEXT`  |    | 条件セットの名前 (ユーザーが設定)|
+| `memo`   | `TEXT`  |    | 条件セットに関するメモ |
+| `stock_selection_header_id`  | `BIGINT`| `REFERENCES sptch_stock_selections_header(id)` | 銘柄選択条件への外部キー（任意） |
+| `simulation_period_id`  | `BIGINT`| `REFERENCES sptch_simulation_periods(id)`  | シミュレーション期間条件への外部キー（任意）    |
+| `trade_parameter_id`    | `BIGINT`| `REFERENCES sptch_trade_parameters(id)`    | 取引前提条件への外部キー（任意） |
+| `signal_id`   | `BIGINT`| `REFERENCES sptch_signals(id)`   | 売買シグナル条件セットへの外部キー（任意） |
+| `fee_tax_id`  | `BIGINT`| `REFERENCES sptch_fee_taxes(id)` | 手数料・税金条件への外部キー（任意）  |
+| `value_hash` |TEXT| NOT NULL UNIQUE|JSONの正規化後のハッシュ値|
+| `created_at`  | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード作成日時  |
+| `updated_at`  | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード更新日時 (トリガーで自動更新を推奨)|
+| `deleted_at`  | `TIMESTAMP WITH TIME ZONE` |    | レコード削除日時 (論理削除の場合)|
+
+
+#### 2\. `sptch_stock_selections_header`
+
+  * **銘柄選択条件のヘッダー情報**
+  * 個別の銘柄コードリスト（`sptch_stock_selections_stocks`）をまとめるヘッダー情報です。複数の分析条件から共通の銘柄リストを参照・再利用できます。
+
+| カラム名| データ型    | 制約    | 説明    |
+|:-------------|:---------------------------|:----------------------------|:----------------------------------------------------------|
+| `id`    | `BIGSERIAL` / `INTEGER`| `PRIMARY KEY`| 銘柄選択条件セットの一意のID  |
+| `user_id`    | `UUID` | `NOT NULL`   | 条件を作成したユーザーのID (認証ユーザー)  |
+| `name`  | `TEXT` |    | 条件セットの名前 (ユーザーが設定)|
+| `memo`  | `TEXT` |    | 条件セットに関するメモ |
+| `value_hash` |TEXT| NOT NULL UNIQUE|JSONの正規化後のハッシュ値|
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード作成日時  |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード更新日時 (トリガーで自動更新を推奨)|
+| `deleted_at`  | `TIMESTAMP WITH TIME ZONE` |    | レコード削除日時 (論理削除の場合)|
+
+
+#### 3\. `sptch_stock_selections_stocks`
+
+  * **銘柄選択条件の実データ**
+  * `sptch_stock_selections_header`の実態です。各銘柄コードを複数保持します。
+
+| カラム名   | データ型    | 制約 | 説明 |
+|:-----------|:---------------------------|:-----------------------------------|:---------------|
+| `id`  | `BIGSERIAL` / `INTEGER`| `PRIMARY KEY`  | レコードの一意のID |
+| `header_id`| `BIGINT`    | `NOT NULL REFERENCES sptch_stock_selections_header(id) ON DELETE CASCADE` | 銘柄選択ヘッダーへの外部キー |
+| `order_no` | `INTEGER`   | `NOT NULL`| 銘柄の表示順/連番  |
+| `stock_code`| `VARCHAR(10)`    | `NOT NULL`| 銘柄コード  |
+
+#### 4\. `sptch_simulation_periods`
+
+  * **シミュレーション期間条件**
+  * シミュレーションの対象期間を定義します。複数の分析条件から共通の期間設定を参照・再利用できます。
+
+| カラム名| データ型    | 制約    | 説明    |
+|:-------------|:---------------------------|:----------------------------|:----------------------------------------------------------|
+| `id`    | `BIGSERIAL` / `INTEGER`| `PRIMARY KEY`| 期間条件の一意のID|
+| `user_id`    | `UUID` | `NOT NULL`   | 条件を作成したユーザーのID (認証ユーザー)  |
+| `name`  | `TEXT` |    | 条件セットの名前 (ユーザーが設定)|
+| `memo`  | `TEXT` |    | 条件セットに関するメモ |
+| `start_date` | `DATE` | `NOT NULL`   | シミュレーション開始日 |
+| `end_date`   | `DATE` | `NOT NULL`   | シミュレーション終了日 |
+| `value_hash` |TEXT| NOT NULL UNIQUE|JSONの正規化後のハッシュ値|
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード作成日時  |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード更新日時 (トリガーで自動更新を推奨)|
+
+
+#### 5\. `sptch_trade_parameters`
+
+  * **取引前提条件**
+  * 資金管理や取引の前提となる条件を格納します。複数の分析条件から共通の取引前提を参照・再利用できます。
+
+| カラム名| データ型    | 制約    | 説明 |
+|:------------------|:---------------------------|:----------------------------|:---------------|
+| `id`    | `BIGSERIAL` / `INTEGER`| `PRIMARY KEY`| 取引ルールの一意のID |
+| `user_id`    | `UUID` | `NOT NULL`   | 条件を作成したユーザーのID (認証ユーザー)  |
+| `name`  | `TEXT` |    | 条件セットの名前 (ユーザーが設定)|
+| `memo`  | `TEXT` |    | 条件セットに関するメモ |
+| `max_purchase_amount` | `INTEGER`   |    | 最大購入金額|
+| `min_volume` | `BIGINT`    |    | 最低出来高  |
+| `trade_unit` | `INTEGER`   | `NOT NULL`   | 取引単位  |
+| `conditions_json`   | `JSONB`|    | 条件 (JSONで格納・可変になることを想定) |
+| `value_hash` |TEXT| NOT NULL UNIQUE|JSONの正規化後のハッシュ値|
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード作成日時 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード更新日時 (トリガーで自動更新を推奨)|
+| `deleted_at`  | `TIMESTAMP WITH TIME ZONE` |    | レコード削除日時 (論理削除の場合)|
+
+
+#### 6\. `sptch_signals`
+
+  * **売買シグナル条件（エントリー・エグジットのセット）**
+  * エントリー条件とエグジット条件の組み合わせを定義します。これにより、取引タイプと、それぞれ独立したエントリー条件およびエグジット条件を紐付けます。
+
+| カラム名| データ型    | 制約    | 説明    |
+|:------------------|:---------------------------|:----------------------------|:----------------------------------------------------------|
+| `id`    | `BIGSERIAL` / `INTEGER`| `PRIMARY KEY`| シグナル条件セットの一意のID|
+| `user_id`    | `UUID` | `NOT NULL`   | 条件を作成したユーザーのID (認証ユーザー)  |
+| `name`  | `TEXT` |    | 条件セットの名前 (ユーザーが設定)|
+| `memo`  | `TEXT` |    | 条件セットに関するメモ |
+| `transaction_type`| `VARCHAR(10)`    | `NOT NULL`   | 取引タイプ ('long', 'short')|
+| `entry_signal_id` | `BIGINT`    | `NOT NULL REFERENCES sptch_entry_signals(id)` | エントリーシグナル条件への外部キー    |
+| `exit_signal_id`  | `BIGINT`    | `REFERENCES sptch_exit_signals(id)` | エグジットシグナル条件への外部キー（NULL許容）|
+| `value_hash` |TEXT| NOT NULL UNIQUE|JSONの正規化後のハッシュ値|
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード作成日時  |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード更新日時 (トリガーで自動更新を推奨)|
+| `deleted_at`  | `TIMESTAMP WITH TIME ZONE` |    | レコード削除日時 (論理削除の場合)|
+
+
+#### 7\. `sptch_entry_signals`
+
+  * **エントリーシグナル条件の詳細**
+  * エントリー条件の具体的な内容をJSONB形式で格納します。複数のシグナルセットから共通のエントリー条件を参照・再利用できます。
+
+| カラム名  | データ型    | 制約    | 説明 |
+|:--------------------|:---------------------------|:----------------------------|:---------------|
+| `id` | `BIGSERIAL` / `INTEGER`| `PRIMARY KEY`| エントリーシグナル条件の一意のID |
+| `user_id` | `UUID` | `NOT NULL`   | 条件を作成したユーザーのID (認証ユーザー)  |
+| `name`    | `TEXT` |    | 条件セットの名前 (ユーザーが設定)|
+| `memo`    | `TEXT` |    | 条件セットに関するメモ |
+| `conditions_json`   | `JSONB`| `NOT NULL`   | エントリー条件 (JSONで格納) |
+| `value_hash` |TEXT| NOT NULL UNIQUE|JSONの正規化後のハッシュ値|
+| `created_at`   | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード作成日時 |
+| `updated_at`   | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード更新日時 (トリガーで自動更新を推奨)|
+| `deleted_at`  | `TIMESTAMP WITH TIME ZONE` |    | レコード削除日時 (論理削除の場合)|
+
+#### 8\. `sptch_exit_signals`
+
+  * **エグジットシグナル条件の詳細**
+  * エグジット条件の具体的な内容をJSONB形式で格納します。複数のシグナルセットから共通のエグジット条件を参照・再利用できます。
+
+| カラム名  | データ型    | 制約    | 説明 |
+|:--------------------|:---------------------------|:----------------------------|:---------------|
+| `id` | `BIGSERIAL` / `INTEGER`| `PRIMARY KEY`| エグジットシグナル条件の一意のID |
+| `user_id` | `UUID` | `NOT NULL`   | 条件を作成したユーザーのID (認証ユーザー)  |
+| `name`    | `TEXT` |    | 条件セットの名前 (ユーザーが設定)|
+| `memo`    | `TEXT` |    | 条件セットに関するメモ |
+| `conditions_json`   | `JSONB`| `NOT NULL`   | エグジット条件 (JSONで格納) |
+| `value_hash` |TEXT| NOT NULL UNIQUE|JSONの正規化後のハッシュ値|
+| `created_at`   | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード作成日時 |
+| `updated_at`   | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード更新日時 (トリガーで自動更新を推奨)|
+| `deleted_at`  | `TIMESTAMP WITH TIME ZONE` |    | レコード削除日時 (論理削除の場合)|
+
+#### 9\. `sptch_fee_taxes`
+
+  * **手数料・税金条件**
+  * シミュレーションの損益計算に直接影響する要素を格納します。NUMERIC 型で精度を保証します。複数の分析条件から共通の手数料・税金設定を参照・再利用できます。
+
+| カラム名| データ型    | 制約    | 説明    |
+|:-------------|:---------------------------|:----------------------------|:----------------------------------------------------------|
+| `id`    | `BIGSERIAL` / `INTEGER`| `PRIMARY KEY`| 手数料・税金情報の一意のID  |
+| `user_id`    | `UUID` | `NOT NULL`   | 条件を作成したユーザーのID (認証ユーザー)  |
+| `name`  | `TEXT` |    | 条件セットの名前 (ユーザーが設定)|
+| `memo`  | `TEXT` |    | 条件セットに関するメモ |
+| `buy_fee_rate`| `NUMERIC(8,5)`   | `NOT NULL`   | 買い手数料率 (例: 0.00450)  |
+| `sell_fee_rate`| `NUMERIC(8,5)`   | `NOT NULL`   | 売り手数料率 (例: 0.005)    |
+| `tax_rate`   | `NUMERIC(8,5)`   | `NOT NULL`   | 税率 (例: 0.20315)|
+| `value_hash` |TEXT| NOT NULL UNIQUE|JSONの正規化後のハッシュ値|
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード作成日時  |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `DEFAULT NOW()`   | レコード更新日時 (トリガーで自動更新を推奨)|
+| `deleted_at`  | `TIMESTAMP WITH TIME ZONE` |    | レコード削除日時 (論理削除の場合)|

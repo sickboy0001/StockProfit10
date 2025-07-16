@@ -73,7 +73,7 @@ const ConditionRenderer: React.FC<{
             ? "すべての条件を満たす (AND)"
             : "いずれかの条件を満たす (OR)"}
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1">
           {group.conditions.map((cond, index) => (
             <ConditionRenderer key={index} condition={cond} level={level + 1} />
           ))}
@@ -85,7 +85,7 @@ const ConditionRenderer: React.FC<{
   const simpleCondition = condition as SimpleCondition;
   return (
     <div
-      className="bg-gray-50 p-3 rounded-md text-gray-800 text-sm border border-gray-200"
+      className="bg-gray-50 p-2 rounded-md text-gray-800 text-sm border border-gray-200"
       style={{ marginLeft: `${level > 0 ? 16 : 0}px` }}
     >
       {formatSimpleCondition(simpleCondition)}

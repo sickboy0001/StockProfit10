@@ -1,3 +1,4 @@
+// dummy
 // c:\work\dev\spa\stockprofit10-app\src\app\actions\Compass\simulationService.ts
 "use server";
 
@@ -20,6 +21,7 @@ import {
   getDateWithPeriosStart,
   getDaysMAfter,
   getDaysNBefore,
+  getProfitTargetStopLoss,
 } from "./PlanFuncs";
 import { recordSimulationStocks, recordTradeResult } from "./simulationDb";
 
@@ -222,14 +224,82 @@ async function getTradeRecord(
     currentDate.toISOString().split("T")[0]
   );
 
-  const daysMafter = 10;
-  const exitDate = await getDateWithPeriosEnd(supabase, entrtDate, daysMafter);
+  const daysMafter = getDaysMAfter(exitSignal);
+  const defExitDate = await getDateWithPeriosEnd(
+    supabase,
+    entrtDate,
+    daysMafter
+  );
 
   const entryTrade = stockData.find((d) => d.date === entrtDate);
-  const exitTrade = stockData.find((d) => d.date === exitDate);
-  if (!entryTrade || !exitTrade) {
+  if (!entryTrade) {
     const summary = {
-      note: `銘柄[${stockDetail.code}]の${entrtDate}が見つからないか、${daysMafter}日後${exitDate}のデータが見つかりません`,
+      note: `銘柄[${stockDetail.code}]のエントリー日(${entrtDate})のデータが見つかりません`,
+    };
+    return { summary, tradeRecord: null };
+  }
+
+  // --- ここから決済日を決定するロジック ---
+  let exitDate = defExitDate;
+  let exitReason = "期間満了";
+
+  /*
+  {"exitConditions": [
+    {"days": 10, "type": "fixedDays"}, 
+    {"type": "profitTarget", "percent": 10}, 
+    {"type": "stopLoss", "percent": 10}]}
+   */
+  // const overProfitPercent = 0.1; // +10%で利益確定
+  // const underProfitPercent = -0.1; // -10%で損切り
+  const { profitTarget, stopLoss } = getProfitTargetStopLoss(exitSignal);
+  const entryPrice = entryTrade.close;
+
+  const entryIndex = stockData.findIndex((d) => d.date === entrtDate);
+
+  // デフォルトの決済日までのインデックスを検索
+  let loopEndIndex = stockData.findIndex((d) => d.date === defExitDate);
+  if (loopEndIndex === -1) {
+    // データが期間の途中で終わっている場合、最後までチェック
+    loopEndIndex = stockData.length - 1;
+  }
+
+  // エントリーの翌日からループして利益確定・損切りをチェック
+  if (entryIndex !== -1) {
+    for (let i = entryIndex + 1; i <= loopEndIndex; i++) {
+      const currentDayData = stockData[i];
+      if (!currentDayData) continue;
+
+      const currentPrice = currentDayData.close;
+      const profitRate = (currentPrice - entryPrice) / entryPrice;
+      // console.log(
+      //   "seekexitday",
+      //   currentPrice,
+      //   entryPrice,
+      //   profitRate,
+      //   stopLoss
+      // );
+      // 利益確定
+      if (profitRate >= profitTarget) {
+        exitDate = currentDayData.date;
+        exitReason = "利益確定";
+        break; // 条件を満たしたらループを抜ける
+      }
+
+      // 損切り
+      if (profitRate <= stopLoss) {
+        exitDate = currentDayData.date;
+        exitReason = "損切り";
+        break; // 条件を満たしたらループを抜ける
+      }
+    }
+  }
+
+  // console.log("exitDate", exitDate, exitReason);
+
+  const exitTrade = stockData.find((d) => d.date === exitDate);
+  if (!exitTrade) {
+    const summary = {
+      note: `銘柄[${stockDetail.code}]の決済日(${exitDate})のデータが見つかりません。エントリー日: ${entrtDate}`,
     };
     return { summary, tradeRecord: null };
   }
@@ -259,6 +329,7 @@ async function getTradeRecord(
     quantity: trade_quantity,
     amount: trade_quantity * entryTrade.close,
   };
+  // console.log("exitTrade", exitTrade);
 
   const exit_trade: OrderFill = {
     trade_date: exitTrade.date,
@@ -268,12 +339,14 @@ async function getTradeRecord(
   };
 
   const gross_profit_amount = exit_trade.amount - entry_trade.amount;
-  const gross_profit_rate = gross_profit_amount / entryTrade.close;
+  const gross_profit_rate =
+    entry_trade.amount !== 0 ? gross_profit_amount / entry_trade.amount : 0;
   const net_profit_amount =
     gross_profit_amount > 0
       ? (1 - feeTax.tax_rate) * gross_profit_amount
       : gross_profit_amount;
-  const net_profit_rate = net_profit_amount / entryTrade.close;
+  const net_profit_rate =
+    entry_trade.amount !== 0 ? net_profit_amount / entry_trade.amount : 0;
   const tradeRecord: TradeRecord = {
     stock_code: stockDetail.code,
     trade_method: "long",
@@ -289,6 +362,7 @@ async function getTradeRecord(
 
   const note =
     `[${tradeRecord.stock_code}] ` +
+    `${exitReason} ` +
     `start_date:${tradeRecord.entry_trade.trade_date} ` +
     `/end_date:${tradeRecord.exit_trade.trade_date}` +
     `/start to end :${tradeRecord.entry_trade.amount.toFixed(
@@ -386,7 +460,7 @@ export async function runSimulation(
       `シミュレーションに必要な企業詳細情報の取得に失敗しました: ${stockDetailsError}`
     );
   }
-  console.log("stockCompanyDetails.length:", stockCompanyDetails.length);
+  // console.log("stockCompanyDetails.length:", stockCompanyDetails.length);
 
   const stockCodeWithCompanys = planCondition.stockCodes.map((stockInfo) => {
     // .filter() は配列を返すため、.find() を使って最初の一致する要素を取得します。
@@ -420,12 +494,19 @@ export async function runSimulation(
     planCondition.simulationPeriod.start_date,
     daysN
   );
+  // console.log(
+  //   "runSimulation planCondition.entrySingal.Condation_days",
+  //   planCondition.simulationPeriod.start_date
+  // );
+  // console.log("runSimulation targetStartDate", targetStartDate);
+
+  // -)
   // - 02-03:ExitSignal条件のM日後を確認
   //   - input sptch_exit_signals
   const daysM = getDaysMAfter(planCondition.exitSignal.conditions_json);
   // - 02-04:終了日のM日後を取得
   //   - input sptch_simulation_periods
-  console.log("runSimulation planCondition.exitSingal.Condation_days", daysM);
+  // console.log("runSimulation planCondition.exitSingal.Condation_days", daysM);
   const targetEndDate = await getDateWithPeriosEnd(
     supabase,
     planCondition.simulationPeriod.end_date,
@@ -464,7 +545,6 @@ export async function runSimulation(
       targetStartDate,
       targetEndDate
     );
-
     if (!stockData) {
       console.warn(
         `銘柄コード ${stockCode} の株価データが取得できませんでした。`
@@ -482,6 +562,8 @@ export async function runSimulation(
         q.close !== null &&
         q.volume !== null
     ) as DailyQuote[];
+
+    //todo ５日間での出来高が平均で１００００以上あること
 
     // 処理対象の日付をSetに格納して高速にルックアップできるようにする
     const availableDates = new Set(cleanStockData.map((d) => d.date));
@@ -530,7 +612,7 @@ export async function runSimulation(
         }
         if (tradeRecord !== null) {
           // console.log(tradeRecord);
-          console.log(tradeRecordSummary.note);
+          // console.log(tradeRecordSummary.note);
           try {
             await recordTradeResult(supabase, simulationResultId, tradeRecord);
           } catch (error) {

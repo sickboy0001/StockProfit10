@@ -180,7 +180,7 @@ const PlanResultTrades: React.FC<PlanResultTradesProps> = ({
                         : "text-red-600"
                     }`}
                   >
-                    {(trade.gross_profit_rate ?? 0).toFixed(2)}%
+                    {((trade.gross_profit_rate ?? 0) * 100).toFixed(2)}%
                   </TableCell>
                   <TableCell className="py-3 px-4 text-sm">
                     <Button

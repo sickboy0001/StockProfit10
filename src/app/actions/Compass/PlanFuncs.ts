@@ -15,6 +15,7 @@ interface EntryCondition {
 interface ExitCondition {
   type: string;
   days?: number;
+  percent?: number;
 }
 
 /**
@@ -44,7 +45,12 @@ export function getDaysNBefore(conditions_json: string | object): number {
       const entryConditions = conditions.entryConditions;
 
       const daysArray = entryConditions.map((cond) => {
-        if (cond.type === "priceMovement") return cond.variableADays || 0;
+        //月、火、水、木、金、土
+        //　　　　　　　　〇　　　←対象日の朝に主計する想定
+        //〇　　　　　　　　　　　←クローズが基準なので、
+        // 　　　　　　　　　　　　３日前だと、その前日（火曜日の前日）が対象になる
+        // 　　　　　　　　　　　　したがって、３日間の平均線なら１追加する。
+        if (cond.type === "priceMovement") return (cond.variableADays || 0) + 1;
         if (cond.type === "macdCrossover") return cond.macdLongEma || 0;
         if (cond.type === "macdZeroCrossover") return cond.macdLongEma || 0;
         return 0;
@@ -86,6 +92,62 @@ export function getDaysMAfter(conditions_json: string | object): number {
   // 'fixedDays' が見つからない場合やJSONパースに失敗した場合のデフォルト値
   return 10;
 }
+
+/*
+{"exitConditions": 
+  [
+  {"days": 10, "type": "fixedDays"}, 
+  {"type": "profitTarget", "percent": 10}, 
+  {"type": "stopLoss", "percent": 10}
+  ]
+  }
+  return 
+    profitTarget 0.1
+    stopLoss -0.1
+ */
+export function getProfitTargetStopLoss(conditions_json: string | object): {
+  profitTarget: number;
+  stopLoss: number;
+} {
+  // console.log("getDaysMAfter", conditions_json);
+  let profitTarget = 0.1; // デフォルト値
+  let stopLoss = -0.1; // デフォルト値
+
+  try {
+    // 引数が文字列ならパースし、オブジェクトならそのまま使用する
+    const conditions: ExitSignalConditions =
+      typeof conditions_json === "string"
+        ? JSON.parse(conditions_json)
+        : (conditions_json as ExitSignalConditions);
+    //  console.log("conditions", conditions);
+    // `exitConditions` 配列が存在するかチェック。存在しない場合はデフォルト値を返す。
+    if (conditions && Array.isArray(conditions.exitConditions)) {
+      const profitTargetCondition = conditions.exitConditions.find(
+        (cond) => cond.type === "profitTarget"
+      );
+      // console.log("profitTargetCondition", profitTargetCondition);
+      if (
+        profitTargetCondition &&
+        typeof profitTargetCondition.percent === "number"
+      ) {
+        profitTarget = profitTargetCondition.percent / 100;
+      }
+
+      const stopLossCondition = conditions.exitConditions.find(
+        (cond) => cond.type === "stopLoss"
+      );
+
+      // console.log("stopLossCondition", stopLossCondition);
+      if (stopLossCondition && typeof stopLossCondition.percent === "number") {
+        stopLoss = -(stopLossCondition.percent / 100);
+      }
+    }
+  } catch (error) {
+    console.error("Error parsing exit conditions JSON:", error);
+  }
+  return { profitTarget, stopLoss };
+}
+
 //start_dateから、dayN日前の日付の入手
 // start_date:2025-07-04(Fri)
 // dayN:1

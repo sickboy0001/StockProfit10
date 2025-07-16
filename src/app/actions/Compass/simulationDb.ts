@@ -302,7 +302,7 @@ export async function getResultTradeByResultId(
   if (!resultId || isNaN(resultId)) {
     return { data: null, error: "分析条件IDが無効です。" };
   }
-  console.log("", "getResultTradeByResultId", resultId);
+  // console.log("", "getResultTradeByResultId", resultId);
   const supabase = await createClient();
 
   try {

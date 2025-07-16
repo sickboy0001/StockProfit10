@@ -18,6 +18,7 @@ import {
   TradeSummary,
 } from "@/app/actions/Compass/simulationDb";
 import PlanResultLog from "./PlanResultLog";
+// import DispPlan from "./DispPlan";
 
 // データ型定義 (Supabaseのテーブルスキーマに合わせて調整)
 

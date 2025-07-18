@@ -11,7 +11,7 @@ import {
   PlanDetailsAll,
 } from "@/app/actions/Compass/PlanActions";
 import { initiateSimulationAction } from "@/app/actions/Compass/SimulationActions";
-import DispPlan from "./DispPlan";
+import PlanDisp from "./PlanDisp";
 import { Button } from "@/components/ui/button";
 
 interface GeneratePlanResultProps {
@@ -78,7 +78,7 @@ export default function GeneratePlanResult(props: GeneratePlanResultProps) {
           <p className="text-gray-500 text-left mt-1">
             過去データに基づき、プランのシミュレーション実施画面です。
           </p>
-          <DispPlan id={props.id}></DispPlan>
+          <PlanDisp id={props.id}></PlanDisp>
           {/* アクションボタン */}
           <Button
             type="submit"

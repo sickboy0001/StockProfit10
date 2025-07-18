@@ -135,6 +135,7 @@ async function getOrCreateTradeParameters(
   const parametersHashInput = [
     userId,
     params.tradeFilter.maxPurchaseAmount,
+    params.tradeFilter.minPurchaseAmount,
     params.tradeFilter.minVolume,
     params.tradeFilter.tradeUnit,
   ];
@@ -150,6 +151,7 @@ async function getOrCreateTradeParameters(
       name: params.tradeFilter.name,
       memo: params.tradeFilter.memo,
       max_purchase_amount: params.tradeFilter.maxPurchaseAmount,
+      min_purchase_amount: params.tradeFilter.minPurchaseAmount,
       min_volume: params.tradeFilter.minVolume,
       trade_unit: params.tradeFilter.tradeUnit,
       value_hash: parameters_value_hash,

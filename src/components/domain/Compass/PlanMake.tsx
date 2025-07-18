@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
-import { format } from "date-fns";
-
+import { format, startOfMonth, endOfMonth, subMonths, addDays } from "date-fns";
 // shadcn/ui のコンポーネントのインポートを想定
 // 実際のプロジェクトでは、これらをインストールし、components/ui に配置しているはずです
 import { Label } from "@/components/ui/label";
@@ -99,6 +98,7 @@ export default function PlanMake() {
     useState<string | null>(null); // 編集中の追加出口条件ID
 
   const [maxPurchaseAmount, setMaxPurchaseAmount] = useState<number>(500000); // 購入金額上限
+  const [minPurchaseAmount, setMinPurchaseAmount] = useState<number>(100000); // 購入金額下限
   const [minVolume, setMinVolume] = useState<number>(100000); // 出来高下限
   const [tradeUnit, setTradeUnit] = useState<number>(100); // 取引単位
   const [buyFeeRate, setBuyFeeRate] = useState<number>(0.5); // 購入時手数料率 (%)
@@ -269,6 +269,44 @@ export default function PlanMake() {
       setOptionalExitConditions
     );
 
+  const setPeriod = (
+    period: "lastMonth" | "thisMonth" | "1w" | "2w" | "4w"
+  ) => {
+    const today = new Date();
+    let newStartDate: Date | undefined = startDate;
+    let newEndDate: Date | undefined = endDate;
+
+    switch (period) {
+      case "lastMonth": {
+        const lastMonthDate = subMonths(today, 1);
+        newStartDate = startOfMonth(lastMonthDate);
+        newEndDate = endOfMonth(lastMonthDate);
+        break;
+      }
+      case "thisMonth":
+        newStartDate = startOfMonth(today);
+        newEndDate = today;
+        break;
+      case "1w":
+      case "2w":
+      case "4w": {
+        if (!startDate) {
+          showCustomToast({
+            message: "期間設定エラー",
+            submessage: "まず開始日を選択してください。",
+            type: "error",
+          });
+          return;
+        }
+        const daysToAdd = period === "1w" ? 7 : period === "2w" ? 14 : 28;
+        newEndDate = addDays(startDate, daysToAdd);
+        break;
+      }
+    }
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+  };
+
   // グループ化するために選択可能なトップレベル入口条件のリストを取得
   const getAvailableEntryConditionsForGrouping = () => {
     return entryConditions;
@@ -429,6 +467,7 @@ export default function PlanMake() {
           name: "",
           memo: "",
           maxPurchaseAmount,
+          minPurchaseAmount,
           minVolume,
           tradeUnit,
         },
@@ -587,6 +626,57 @@ export default function PlanMake() {
                 <h3 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2">
                   シミュレーション期間
                 </h3>
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <div className="flex gap-2">
+                    {" "}
+                    {/* グループ1: 今月、先月 */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPeriod("thisMonth")}
+                    >
+                      今月
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPeriod("lastMonth")}
+                    >
+                      先月
+                    </Button>
+                  </div>
+                  <div className="border-l border-gray-300 h-8 self-center"></div>
+                  <div className="flex gap-2">
+                    {" "}
+                    {/* グループ2: 1週間、2週間、4週間 */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPeriod("1w")}
+                    >
+                      1週間
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPeriod("2w")}
+                    >
+                      2週間
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPeriod("4w")}
+                    >
+                      4週間
+                    </Button>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="startDateForm" className="text-gray-700">
@@ -634,6 +724,24 @@ export default function PlanMake() {
                       value={maxPurchaseAmount}
                       onChange={(e) =>
                         setMaxPurchaseAmount(Number(e.target.value))
+                      }
+                      min="0"
+                      className="rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="max-purchase-amount"
+                      className="text-gray-700"
+                    >
+                      購入金額下限 (円)
+                    </Label>
+                    <Input
+                      id="max-purchase-amount"
+                      type="number"
+                      value={minPurchaseAmount}
+                      onChange={(e) =>
+                        setMinPurchaseAmount(Number(e.target.value))
                       }
                       min="0"
                       className="rounded-md"

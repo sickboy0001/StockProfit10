@@ -23,7 +23,7 @@ interface GeneratePlanResultProps {
   id: string;
 }
 
-export default function DispPlan(props: GeneratePlanResultProps) {
+export default function PlanDisp(props: GeneratePlanResultProps) {
   const { id } = props;
   const [planData, setPlanData] = useState<PlanDetailsAll | null>(null);
   const [isStockListExpanded, setIsStockListExpanded] = useState(false);
@@ -160,6 +160,17 @@ export default function DispPlan(props: GeneratePlanResultProps) {
                       "ja-JP"
                     ) ?? "未設定"}
                     {planData?.tradeParameter?.max_purchase_amount != null && (
+                      <span className="ml-1 text-sm text-gray-600">円</span>
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-gray-700">購入金額下限 (円)</Label>
+                  <p className="mt-1 rounded-md bg-gray-100 p-2 text-base font-medium text-gray-900">
+                    {planData?.tradeParameter?.min_purchase_amount?.toLocaleString(
+                      "ja-JP"
+                    ) ?? "未設定"}
+                    {planData?.tradeParameter?.min_purchase_amount != null && (
                       <span className="ml-1 text-sm text-gray-600">円</span>
                     )}
                   </p>

@@ -19,10 +19,7 @@ interface PlanResultStocksProps {
   router: AppRouterInstance;
 }
 
-const PlanResultStocks: React.FC<PlanResultStocksProps> = ({
-  resultId,
-  router,
-}) => {
+const PlanResultStocks: React.FC<PlanResultStocksProps> = ({ resultId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resultStocks, setResultStocks] = useState<
@@ -120,9 +117,9 @@ const PlanResultStocks: React.FC<PlanResultStocksProps> = ({
                       size="sm"
                       className="bg-blue-500 text-white hover:bg-blue-600 hover:text-white rounded-md px-3 py-1 shadow-sm"
                       onClick={() =>
-                        // TODO: 遷移先を正しいURLに修正する
-                        router.push(
-                          `/stock/ChartTest?stockCode=${stock.stock_code}`
+                        window.open(
+                          `/stock/ChartTest?stockCode=${stock.stock_code}`,
+                          "_blank"
                         )
                       }
                     >

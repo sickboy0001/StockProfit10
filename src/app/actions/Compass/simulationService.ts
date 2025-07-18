@@ -180,11 +180,19 @@ async function selectTargetStock(
       filter_reason = "企業詳細情報または最低購入価格が取得できませんでした。";
       console.warn(`銘柄[${stock.code}]の${filter_reason}`);
     } else if (
+      tradeParameter.max_purchase_amount != null &&
       stock.StockDetail.company_detail.min_price >
-      tradeParameter.max_purchase_amount
+        tradeParameter.max_purchase_amount
     ) {
       score = 0;
       filter_reason = `最低購入価格(${stock.StockDetail.company_detail.min_price}円)が最大購入金額(${tradeParameter.max_purchase_amount}円)を超えています。`;
+    } else if (
+      tradeParameter.min_purchase_amount != null &&
+      stock.StockDetail.company_detail.min_price <
+        tradeParameter.min_purchase_amount
+    ) {
+      score = 0;
+      filter_reason = `最低購入価格(${stock.StockDetail.company_detail.min_price}円)が設定した最小購入金額(${tradeParameter.min_purchase_amount}円)を下回っています。`;
     }
 
     stocksToInsert.push({
@@ -475,7 +483,7 @@ export async function runSimulation(
   //   - input sptch_stock_selections_header sptch_stock_selections_stocks sptch_simulation_periods
   //   - output sptch_simulation_results_stocks
 
-  // 01-01:対象の銘柄の選別 (ヘルパー関数を呼び出し)
+  // 01-01:対象の銘柄の選別
   const { stocks: selectedStocks } = await selectTargetStock(
     supabase,
     analysisConditionId,

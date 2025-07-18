@@ -84,6 +84,7 @@ CREATE TABLE sptch_trade_parameters (
     name TEXT NOT NULL, -- 条件セットの名前
     memo TEXT, -- 条件セットに関するメモ
     max_purchase_amount INTEGER, -- 最大購入金額
+    min_purchase_amount INTEGER, -- 最小購入金額
     min_volume BIGINT, -- 最低出来高
     trade_unit INTEGER NOT NULL, -- 取引単位
     conditions_json JSONB , -- エントリー条件 (JSONで格納)
@@ -92,11 +93,12 @@ CREATE TABLE sptch_trade_parameters (
     deleted_at TIMESTAMP WITH TIME ZONE -- レコード削除日時 (論理削除の場合)
 );
 
+-- ALTER TABLE public.sptch_trade_parameters
+-- ADD COLUMN min_purchase_amount INTEGER;
 -- CREATE TRIGGER set_updated_at_on_trade_parameters
 -- BEFORE UPDATE ON sptch_trade_parameters
 -- FOR EACH ROW
 -- EXECUTE FUNCTION update_updated_at_column();
-
 -- 6. sptch_signals
 CREATE TABLE sptch_signals (
     id BIGSERIAL PRIMARY KEY,

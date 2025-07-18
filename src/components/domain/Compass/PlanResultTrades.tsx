@@ -20,10 +20,7 @@ interface PlanResultTradesProps {
   router: AppRouterInstance;
 }
 
-const PlanResultTrades: React.FC<PlanResultTradesProps> = ({
-  resultId,
-  router,
-}) => {
+const PlanResultTrades: React.FC<PlanResultTradesProps> = ({ resultId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resultTrades, setResultTrades] = useState<
@@ -91,6 +88,9 @@ const PlanResultTrades: React.FC<PlanResultTradesProps> = ({
               <TableHead className="py-3 px-4 text-right text-sm font-semibold text-gray-700">
                 開始金額
               </TableHead>
+              <TableHead className="py-3 px-4 text-right text-sm font-semibold text-gray-700">
+                最小購入金額
+              </TableHead>
               <TableHead className="py-3 px-4 text-left text-sm font-semibold text-gray-700">
                 終了日時
               </TableHead>
@@ -136,6 +136,11 @@ const PlanResultTrades: React.FC<PlanResultTradesProps> = ({
                       : "-"}
                   </TableCell>
                   <TableCell className="py-3 px-4 text-sm text-gray-800 text-right">
+                    {trade.entry_amount
+                      ? `¥${trade.entry_amount.toLocaleString()}`
+                      : "-"}
+                  </TableCell>
+                  <TableCell className="py-3 px -4 text-sm text-gray-800 text-right">
                     {trade.entry_amount
                       ? `¥${trade.entry_amount.toLocaleString()}`
                       : "-"}
@@ -187,13 +192,11 @@ const PlanResultTrades: React.FC<PlanResultTradesProps> = ({
                       variant="outline"
                       size="sm"
                       className="bg-blue-500 text-white hover:bg-blue-600 hover:text-white rounded-md px-3 py-1 shadow-sm"
-                      // TODO: 遷移先を正しいURLに修正する
-                      onClick={
-                        () =>
-                          router.push(
-                            `/stock/ChartTest?stockCode=${trade.stock_code}`
-                          )
-                        //http://192.168.2.102:3000/stock/ChartTest?stockCode=4540
+                      onClick={() =>
+                        window.open(
+                          `/stock/ChartTest?stockCode=${trade.stock_code}`,
+                          "_blank"
+                        )
                       }
                     >
                       チャートへ
@@ -204,7 +207,7 @@ const PlanResultTrades: React.FC<PlanResultTradesProps> = ({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={12}
+                  colSpan={13}
                   className="text-center py-4 text-gray-500"
                 >
                   取引履歴はありません。

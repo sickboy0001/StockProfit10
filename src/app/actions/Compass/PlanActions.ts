@@ -138,6 +138,7 @@ async function getSingleRecordById<T>(
         error: `${errorContext}の取得に失敗しました: ${error.message}`,
       };
     }
+    // console.log("getSingleRecordById", tableName, data);
     return { data, error: null };
   } catch (err: unknown) {
     const message =
@@ -165,6 +166,7 @@ export interface TradeParameter {
   name: string;
   memo: string | null;
   max_purchase_amount: number;
+  min_purchase_amount: number;
   min_volume: number;
   trade_unit: number;
   condition_json: string;
@@ -498,7 +500,6 @@ export async function getPlanDetailsAll(
   }
   const plan = planResult.data;
 
-  // 2. 関連情報を並行して取得
   // 2. 関連情報を並行して取得
   const [
     simulationPeriodResult,

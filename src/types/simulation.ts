@@ -74,6 +74,7 @@ export interface ITradeFilterParams {
   name: string;
   memo: string;
   maxPurchaseAmount: number;
+  minPurchaseAmount: number;
   minVolume: number;
   tradeUnit: number;
 }

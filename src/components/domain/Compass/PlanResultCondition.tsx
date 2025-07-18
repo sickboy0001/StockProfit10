@@ -1,5 +1,5 @@
 import React from "react";
-import DispPlan from "./DispPlan";
+import PlanDisp from "./PlanDisp";
 
 interface PlanResultConditionProps {
   planId: string;
@@ -52,7 +52,7 @@ const PlanResultCondition: React.FC<PlanResultConditionProps> = ({
 
   return (
     <div className="p-4">
-      <DispPlan id={planId}></DispPlan>
+      <PlanDisp id={planId}></PlanDisp>
     </div>
   );
 };

@@ -1,0 +1,40 @@
+name: Scheduled Vercel API Call
+
+on:
+  schedule:
+    # UTC 時間で毎時0分に実行 (JST: 毎時9分)
+    # Cron 式について:
+    # 分 (0-59) 時 (0-23) 日 (1-31) 月 (1-12) 曜日 (0-6)
+    - cron: "0 * * * *"
+
+jobs:
+  call-api-route:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call Next.js API Route on Vercel
+        env:
+          # Vercel にデプロイされたアプリケーションのベースURL
+          VERCEL_APP_BASE_URL: ${{ secrets.VERCEL_APP_BASE_URL }}
+          # API Route の認証用シークレットキー (Next.js側と共通)
+          API_AUTH_SECRET: ${{ secrets.API_AUTH_SECRET }}
+        run: |
+          if [ -z "$VERCEL_APP_BASE_URL" ]; then
+            echo "Error: VERCEL_APP_BASE_URL secret is not set."
+            exit 1
+          fi
+          if [ -z "$API_AUTH_SECRET" ]; then
+            echo "Error: API_AUTH_SECRET secret is not set."
+            exit 1
+          fi
+
+          # 呼び出すAPI Routeのパス
+          API_ROUTE_PATH="/api/cron-job" # Next.js側で定義するAPI Routeのパス
+
+          # curl で POST リクエストを送信
+          # JSON形式で認証用のシークレットキーを送信
+          echo "Calling Vercel API Route: ${VERCEL_APP_BASE_URL}${API_ROUTE_PATH}"
+          curl -X POST \
+              -H "Content-Type: application/json" \
+              -d "{\"secret\": \"$API_AUTH_SECRET\"}" \
+              "${VERCEL_APP_BASE_URL}${API_ROUTE_PATH}"

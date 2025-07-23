@@ -40,7 +40,7 @@ export interface SimpleExitCondition {
 }
 
 export interface GroupedCondition<
-  T extends SimpleEntryCondition | SimpleExitCondition
+  T extends SimpleEntryCondition | SimpleExitCondition,
 > {
   id: string;
   isGroup: true;

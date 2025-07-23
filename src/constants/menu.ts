@@ -59,6 +59,12 @@ export const headerNavItems: NavItem[] = [
         href: "/stock/ApiDataViewer",
       },
       {
+        id: "contact",
+        label: "contact",
+        roles: ["ADMIN", "MAN", "MEN", "DEB"],
+        href: "/Contact",
+      },
+      {
         id: "ImportJsx",
         label: "ImportJsx",
         roles: ["ADMIN", "MAN", "MEN", "DEB"],

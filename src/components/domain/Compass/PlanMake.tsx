@@ -40,46 +40,165 @@ import {
   DisplayableExitCondition,
 } from "@/types/simulation";
 import Link from "next/link";
+import { PlanDetailsAll } from "@/app/actions/Compass/PlanActions";
 interface FetchedPortfolio {
   id: string;
   name: string;
   stocks: { code: string; name: string }[];
 }
 
-export default function PlanMake() {
+interface planMakeProps {
+  initialPlan?: PlanDetailsAll; // analysis_condition_id を想定
+}
+
+export default function PlanMake(props: planMakeProps) {
   const [portfolioId, setPortfolioId] = useState<string>(""); // ポートフォリオID
   const [stockCodes, setStockCodes] = useState<string[]>([]); // 個別銘柄コード (複数)
   const [startDate, setStartDate] = useState<Date | undefined>(
-    new Date(2023, 0, 1)
+    props.initialPlan?.simulationPeriod?.start_date
+      ? new Date(props.initialPlan.simulationPeriod.start_date)
+      : new Date(2023, 0, 1)
   ); // シミュレーション開始日
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date()); // シミュレーション終了日
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    props.initialPlan?.simulationPeriod?.end_date
+      ? new Date(props.initialPlan.simulationPeriod.end_date)
+      : new Date()
+  ); // シミュレーション終了日
 
   // 取引タイプ (ロング/ショート) を追加
-  const [transactionType, setTransactionType] =
-    useState<TransactionDirection>("long");
+  const [transactionType, setTransactionType] = useState<TransactionDirection>(
+    // DBの"buy"をコンポーネントの"long"に、"sell"を"short"にマッピングする
+    props.initialPlan?.signal?.transaction_type === "sell" ? "short" : "long" // "buy" または未定義の場合は "long" をデフォルトとする
+  );
+
+  const getInitialEntryState = () => {
+    const conditionsJson = props.initialPlan?.entrySignal?.conditions_json;
+    if (conditionsJson) {
+      try {
+        const parsed =
+          typeof conditionsJson === "string"
+            ? JSON.parse(conditionsJson)
+            : conditionsJson;
+        return {
+          entryConditions: parsed.entryConditions || [],
+          globalEntryConditionLogic: parsed.globalEntryConditionLogic || "AND",
+        };
+      } catch (e) {
+        console.error("Failed to parse entry conditions from defplan", e);
+      }
+    }
+    return { entryConditions: [], globalEntryConditionLogic: "AND" };
+  };
+  const initialEntryState = getInitialEntryState();
 
   // 入口サイン条件の管理
   const [entryConditions, setEntryConditions] = useState<
     DisplayableEntryCondition[]
-  >([]); // 追加された入口サイン条件のリスト
+  >(initialEntryState.entryConditions); // 追加された入口サイン条件のリスト
   const [globalEntryConditionLogic, setGlobalEntryConditionLogic] = useState<
     "AND" | "OR"
-  >("AND"); // 複数のトップレベル入口条件・グループの結合ロジック
+  >(initialEntryState.globalEntryConditionLogic); // 複数のトップレベル入口条件・グループの結合ロジック
+
+  const getInitialExitState = () => {
+    const conditionsJson = props.initialPlan?.exitSignal?.conditions_json;
+    if (conditionsJson) {
+      try {
+        const parsed =
+          typeof conditionsJson === "string"
+            ? JSON.parse(conditionsJson)
+            : conditionsJson;
+
+        const allConditions: DisplayableExitCondition[] =
+          parsed.exitConditions || [];
+
+        // Default values
+        let baseExitDays = 10;
+        let baseExitProfitPercent = 10;
+        let baseExitStopLossPercent = 10;
+        const optionalExitConditions: DisplayableExitCondition[] = [];
+
+        for (const cond of allConditions) {
+          if (!("isGroup" in cond)) {
+            switch (cond.type) {
+              case "fixedDays":
+                baseExitDays = cond.days ?? 10;
+                break;
+              case "profitTarget":
+                baseExitProfitPercent = cond.percent ?? 10;
+                break;
+              case "stopLoss":
+                baseExitStopLossPercent = cond.percent ?? 10;
+                break;
+              default:
+                optionalExitConditions.push(cond);
+                break;
+            }
+          } else {
+            // It's a group, which is also optional
+            optionalExitConditions.push(cond);
+          }
+        }
+
+        return {
+          baseExitDays,
+          baseExitProfitPercent,
+          baseExitStopLossPercent,
+          optionalExitConditions,
+        };
+      } catch (e) {
+        console.error("Failed to parse exit conditions from defplan", e);
+      }
+    }
+    // Return default state if no defplan or parsing fails
+    return {
+      baseExitDays: 10,
+      baseExitProfitPercent: 10,
+      baseExitStopLossPercent: 10,
+      optionalExitConditions: [],
+    };
+  };
+  const initialExitState = getInitialExitState();
 
   // 出口サイン条件の管理 (New)
   // 必須の出口条件を個別のStateとして管理
-  const [baseExitDays, setBaseExitDays] = useState<number>(10);
-  const [baseExitProfitPercent, setBaseExitProfitPercent] =
-    useState<number>(10);
+  const [baseExitDays, setBaseExitDays] = useState<number>(
+    initialExitState.baseExitDays
+  );
+  const [baseExitProfitPercent, setBaseExitProfitPercent] = useState<number>(
+    initialExitState.baseExitProfitPercent
+  );
   const [baseExitStopLossPercent, setBaseExitStopLossPercent] =
-    useState<number>(10);
+    useState<number>(initialExitState.baseExitStopLossPercent);
 
   // 追加の出口条件（オプション）はリストで管理
   const [optionalExitConditions, setOptionalExitConditions] = useState<
     DisplayableExitCondition[]
-  >([]);
+  >(initialExitState.optionalExitConditions);
   // 追加出口条件のトップレベル結合ロジックはORに固定されるため、Stateは不要に。
   // const [globalExitConditionLogic, setGlobalExitConditionLogic] = useState<"AND" | "OR">("OR");
+
+  const [maxPurchaseAmount, setMaxPurchaseAmount] = useState<number>(
+    props.initialPlan?.tradeParameter?.max_purchase_amount ?? 500000
+  ); // 購入金額上限
+  const [minPurchaseAmount, setMinPurchaseAmount] = useState<number>(
+    props.initialPlan?.tradeParameter?.min_purchase_amount ?? 100000
+  ); // 購入金額下限
+  const [minVolume, setMinVolume] = useState<number>(
+    props.initialPlan?.tradeParameter?.min_volume ?? 100000
+  ); // 出来高下限
+  const [tradeUnit, setTradeUnit] = useState<number>(
+    props.initialPlan?.tradeParameter?.trade_unit ?? 100
+  ); // 取引単位
+  const [buyFeeRate, setBuyFeeRate] = useState<number>(
+    (props.initialPlan?.feeTax?.buy_fee_rate ?? 0.005) * 100
+  ); //購入時手数料
+  const [sellFeeRate, setSellFeeRate] = useState<number>(
+    (props.initialPlan?.feeTax?.sell_fee_rate ?? 0.005) * 100
+  ); // 売却時手数料率 (%)
+
+  const [taxRate, setTaxRate] = useState<number>(
+    (props.initialPlan?.feeTax?.tax_rate ?? 0.20315) * 100
+  ); // 税率 (%)
 
   // 個別入口条件追加モーダル関連の状態
   const [showAddEntryConditionModal, setShowAddEntryConditionModal] =
@@ -97,13 +216,6 @@ export default function PlanMake() {
   const [editingOptionalExitConditionId, setEditingOptionalExitConditionId] =
     useState<string | null>(null); // 編集中の追加出口条件ID
 
-  const [maxPurchaseAmount, setMaxPurchaseAmount] = useState<number>(500000); // 購入金額上限
-  const [minPurchaseAmount, setMinPurchaseAmount] = useState<number>(100000); // 購入金額下限
-  const [minVolume, setMinVolume] = useState<number>(100000); // 出来高下限
-  const [tradeUnit, setTradeUnit] = useState<number>(100); // 取引単位
-  const [buyFeeRate, setBuyFeeRate] = useState<number>(0.5); // 購入時手数料率 (%)
-  const [sellFeeRate, setSellFeeRate] = useState<number>(0.5); // 売却時手数料率 (%)
-  const [taxRate, setTaxRate] = useState<number>(20.315); // 税率 (%)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // フォーム送信中フラグ
   const [simulationParams, setSimulationParams] =
     useState<ISimulationRequestParams>();
@@ -215,7 +327,7 @@ export default function PlanMake() {
   // 条件削除ハンドラ (汎用、再帰的に処理)
   // この関数は`optionalExitConditions`にのみ適用されるため、`isFixed`のチェックは不要
   const handleRemoveCondition = <
-    T extends DisplayableEntryCondition | DisplayableExitCondition
+    T extends DisplayableEntryCondition | DisplayableExitCondition,
   >(
     idToRemove: string,
     conditionList: T[],
@@ -475,7 +587,8 @@ export default function PlanMake() {
         signs: {
           name: "",
           memo: "",
-          transactionType: transactionType,
+          // コンポーネントのstate("long" | "short")をDBの型("long" | "short")に変換
+          transactionType: transactionType === "short" ? "short" : "long",
           entry_name: "",
           entry_memo: "",
           entry: {

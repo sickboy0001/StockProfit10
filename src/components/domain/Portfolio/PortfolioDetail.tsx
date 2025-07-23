@@ -14,6 +14,7 @@ import {
   PortfolioStockDetail,
 } from "@/types/PortfolioDetail"; // 定義した型をインポート
 import ModalPortfolioEdit from "./ModalPortfolioEdit";
+import ModalPortfolioStockBulkAdd from "./ModalPortfolioStockBulkAdd"; // まとめて追加モーダル
 import ModalPortfolioStockEdit from "./ModalPortfolioStockEdit"; // 個別銘柄編集モーダル
 // Server Actions をインポート
 import {
@@ -22,10 +23,12 @@ import {
   removePortfolioStock,
   updatePortfolioStock,
   updatePortfolioStockOrder,
+  addPortfolioStocks,
 } from "@/app/actions/PortfolioDetail";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns"; // date-fnsのformatとparseISOをインポート
 import StockCodeSearchInput from "@/components/molecules/StockCodeSearchInput";
+import { Loader2 } from "lucide-react";
 
 type PortfolioDetailProps = {
   initialPortfolioDetail: PortfolioDetailData;
@@ -42,6 +45,7 @@ export function PortfolioDetail({
   const [isStockEditModalOpen, setIsStockEditModalOpen] = useState(false);
   const [editingPortfolioStock, setEditingPortfolioStock] =
     useState<PortfolioStockDetail | null>(null);
+  const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false); // まとめて追加モーダル用
   const [newStockInput, setNewStockInput] = useState(""); // 銘柄コード入力フィールドのstate
   const [triggerAddStock, setTriggerAddStock] = useState(false); // 銘柄追加トリガー
 
@@ -85,6 +89,33 @@ export function PortfolioDetail({
       setTriggerAddStock(false); // 入力が空の場合はトリガーをリセットするだけ
     }
   }, [triggerAddStock, newStockInput, handleAddStock]);
+
+  // 銘柄まとめて追加ハンドラ
+  const handleBulkAddStocks = useCallback(
+    async (stockCodes: string[]) => {
+      setIsSaving(true);
+      console.log("handleBulkAddStocks:", portfolio.id);
+      try {
+        const result = await addPortfolioStocks(portfolio.id, stockCodes);
+
+        if (result && typeof result === "object" && "error" in result) {
+          alert(`銘柄の追加に失敗しました: ${result.error}`);
+        } else {
+          // 成功したら画面をリロードして最新の状態を表示
+          window.location.reload();
+        }
+      } catch (e) {
+        console.error("Failed to add stocks in bulk:", e);
+        alert("銘柄のまとめて追加中に予期せぬエラーが発生しました。");
+      } finally {
+        // 成功時はリロードするのでモーダルは閉じる必要がない
+        // 失敗時のみモーダルを閉じるか、ユーザーに再試行させるか
+        setIsBulkAddModalOpen(false);
+        setIsSaving(false);
+      }
+    },
+    [portfolio.id]
+  );
   // ポートフォリオ基本情報の編集保存ハンドラ
   const handleSavePortfolioBasicInfo = async (
     portfolioId: string,
@@ -290,9 +321,10 @@ export function PortfolioDetail({
   return (
     <div className="container mx-auto p-4">
       {isSaving && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-lg shadow-lg">
-            <p className="text-lg font-semibold">処理中...</p>
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="flex items-center space-x-3 bg-white p-5 rounded-lg shadow-xl">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <p className="text-lg font-semibold text-gray-700">処理中...</p>
           </div>
         </div>
       )}
@@ -350,6 +382,13 @@ export function PortfolioDetail({
             disabled={isSaving || !newStockInput.trim()}
           >
             銘柄追加
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setIsBulkAddModalOpen(true)}
+            disabled={isSaving}
+          >
+            まとめて追加
           </Button>
           <span className="text-gray-600 text-sm">
             {portfolio.stocks.length}/50件
@@ -571,6 +610,14 @@ export function PortfolioDetail({
         }}
         stock={editingPortfolioStock}
         onSave={handleSavePortfolioStockEdit}
+        isLoading={isSaving}
+      />
+
+      {/* 銘柄まとめて追加モーダル */}
+      <ModalPortfolioStockBulkAdd
+        isOpen={isBulkAddModalOpen}
+        onClose={() => setIsBulkAddModalOpen(false)}
+        onSave={handleBulkAddStocks}
         isLoading={isSaving}
       />
     </div>

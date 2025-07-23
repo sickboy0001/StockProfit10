@@ -16,6 +16,8 @@ interface PortfolioStockRpcResult {
   current_price: number | null;
   previous_day_close_price: number | null;
 }
+// ... (既存のimport)
+import { revalidatePath } from "next/cache";
 
 /**
  * 指定されたポートフォリオIDの詳細データを取得します。
@@ -460,4 +462,116 @@ export async function updatePortfolioBasicInfo(
     }
     return { error: errorMessage };
   }
+}
+
+// 複数の銘柄を一度に追加するサーバーアクション
+export async function addPortfolioStocks(
+  portfolioId: string,
+  stockCodes: string[]
+): Promise<{ success: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "User not authenticated" };
+  }
+
+  // ポートフォリオの所有者を確認
+  const { data: portfolio, error: portfolioError } = await supabase
+    .from("spt_portfolios")
+    .select("user_id")
+    .eq("id", portfolioId)
+    .single();
+
+  if (portfolioError || !portfolio) {
+    return { error: "Portfolio not found." };
+  }
+
+  if (portfolio.user_id !== user.id) {
+    return { error: "Unauthorized" };
+  }
+
+  // 既存の銘柄数を取得
+  // const { count: existingStockCount, error: countError } = await supabase
+  //   .from("spt_portfolio_stocks")
+  //   .select("*", { count: "exact", head: true })
+  //   .eq("portfolio_id", portfolioId);
+
+  // if (countError) {
+  //   console.log("countError:", countError);
+  //   return { error: `Failed to count existing stocks: ${countError.message}` };
+  // }
+
+  // if ((existingStockCount ?? 0) + stockCodes.length > 50) {
+  //   return {
+  //     error: `ポートフォリオには最大50銘柄まで登録できます。現在${existingStockCount}件、追加しようとしている件数${stockCodes.length}件。`,
+  //   };
+  // }
+
+  // ポートフォリオに既に存在する銘柄コードを取得
+  const { data: existingStocks, error: existingStocksError } = await supabase
+    .from("spt_portfolio_stocks")
+    .select("stock_code")
+    .eq("portal_id", portfolioId);
+
+  if (existingStocksError) {
+    return {
+      error: `Failed to fetch existing stocks: ${existingStocksError.message}`,
+    };
+  }
+
+  const existingStockCodes = new Set(existingStocks.map((s) => s.stock_code));
+
+  // 重複を除いた新しい銘柄コードのリストを作成
+  const newStockCodes = stockCodes.filter(
+    (code) => !existingStockCodes.has(code)
+  );
+
+  if (newStockCodes.length === 0) {
+    return { success: true }; // 追加する新しい銘柄がない場合は成功として終了
+  }
+
+  // display_orderの最大値を取得
+  const { data: maxOrderData, error: maxOrderError } = await supabase
+    .from("spt_portfolio_stocks")
+    .select("display_order")
+    .eq("portal_id", portfolioId)
+    .order("display_order", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (maxOrderError && maxOrderError.code !== "PGRST116") {
+    // PGRST116はレコードがない場合のエラーなので無視
+    return {
+      error: `Failed to get max display order: ${maxOrderError.message}`,
+    };
+  }
+
+  const currentMaxOrder =
+    maxOrderData?.display_order || existingStocks.length || 0;
+
+  const stocksToInsert = newStockCodes.map((code, index) => ({
+    portal_id: portfolioId,
+    stock_code: code,
+    display_order: currentMaxOrder + index + 1,
+  }));
+
+  const { error: insertError } = await supabase
+    .from("spt_portfolio_stocks")
+    .insert(stocksToInsert);
+
+  if (insertError) {
+    if (insertError.code === "23505") {
+      // unique constraint violation
+      return {
+        error: `銘柄の追加に失敗しました。重複した銘柄コードが含まれている可能性があります。`,
+      };
+    }
+    return { error: `Failed to add stocks: ${insertError.message}` };
+  }
+
+  revalidatePath(`/Portfolio/${portfolioId}`);
+  return { success: true };
 }

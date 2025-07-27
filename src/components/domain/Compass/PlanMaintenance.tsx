@@ -285,6 +285,12 @@ export default function PlanMaintenance() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
+                        <Link href={`/Execute/Settings/${ThisDisplayPlan.id}`}>
+                          実行設定
+                        </Link>
+                      </DropdownMenuItem>
+                      {/* //http://192.168.2.100:3000/Execute/Settings/45 */}
+                      <DropdownMenuItem asChild>
                         <Link
                           href={`/dashboard/plans/edit/${ThisDisplayPlan.id}`}
                         >

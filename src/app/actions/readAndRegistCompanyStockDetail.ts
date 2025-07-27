@@ -88,6 +88,32 @@ export async function readAndRegistCompanyStockDetail(
     updated_at: today, // 念のため上書き、またはlatestがこれを含んでいることを確認
   };
 
+  // DBの整数型カラムに挿入するために、浮動小数点数になる可能性のある値を丸める
+  // エラー報告のあった min_price や、同様の問題が起こりうる値を対象とする
+  const keysToRound: (keyof Pick<
+    CompanyStockDetail,
+    | "min_price"
+    | "high_price_ytd"
+    | "low_price_ytd"
+    | "market_cap"
+    | "issued_shares"
+    | "unit_shares"
+  >)[] = [
+    "min_price",
+    "high_price_ytd",
+    "low_price_ytd",
+    "market_cap",
+    "issued_shares",
+    "unit_shares",
+  ];
+
+  for (const key of keysToRound) {
+    const value = dataToUpsert[key];
+    if (typeof value === "number") {
+      dataToUpsert[key] = Math.round(value);
+    }
+  }
+
   console.log(
     `[dateToUpsert] for ${dataToUpsert.code}:`,
     JSON.stringify(dataToUpsert, null, 2)

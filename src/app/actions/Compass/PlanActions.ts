@@ -482,6 +482,72 @@ export async function getStockCodesByHeaderId(
   }
 }
 
+export async function getLastPlanDetailsAll(
+  user_id: string
+): Promise<{ data: PlanDetailsAll | null; error: string | null }> {
+  // 1. getLastPlanIdで最新のPlanIdを入手
+  const { data: planId, error: planIdError } = await getLastPlanId(user_id);
+
+  if (planIdError || planId === null) {
+    return {
+      data: null,
+      error: planIdError || "最新のプランが見つかりませんでした。",
+    };
+  }
+
+  // 2. getPlanDetailsAllで中身の入手
+  const { data, error } = await getPlanDetailsAll(planId);
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  return { data, error: null };
+}
+
+export async function getLastPlanId(
+  user_id: string
+): Promise<{ data: number | null; error: string | null }> {
+  //ヘッダから、一番新しい、PlanIdの入手
+  if (!user_id) {
+    return { data: null, error: "ユーザーIDが必要です。" };
+  }
+
+  const supabase = await createClient();
+
+  try {
+    const { data, error } = await supabase
+      .from("sptch_analysis_conditions")
+      .select("id")
+      .eq("user_id", user_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        // no rows found
+        return {
+          data: null,
+          error: "ユーザーに紐づくプランが見つかりません。",
+        };
+      }
+      console.error("Error fetching last plan ID:", error);
+      return {
+        data: null,
+        error: `最新プランIDの取得に失敗しました: ${error.message}`,
+      };
+    }
+
+    return { data: data.id, error: null };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "予期せぬエラーが発生しました。";
+    console.error("Unexpected error in getLastPlanId:", message);
+    return { data: null, error: message };
+  }
+}
+
 /**
  * プランに関連するすべての詳細情報を一括で取得します。
  * @param planId 取得対象のsptch_analysis_conditionsテーブルのID

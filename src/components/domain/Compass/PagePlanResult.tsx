@@ -12,7 +12,6 @@ const PagePlanResult = (props: ResultProps) => {
   const { id } = props;
   return (
     <div>
-      test
       <PlanResult planId={id}></PlanResult>
     </div>
   );

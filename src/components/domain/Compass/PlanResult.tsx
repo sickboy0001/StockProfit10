@@ -16,6 +16,7 @@ import {
   getSimulationResultsByAnalysisConditionId,
   SimulationResult,
   TradeSummary,
+  getResultStockWithNameByResultId,
 } from "@/app/actions/Compass/simulationDb";
 import PlanResultLog from "./PlanResultLog";
 // import DispPlan from "./DispPlan";
@@ -36,6 +37,7 @@ export default function PlanResult(params: CompassPlanIdProps) {
     SimulationResult[]
   >([]);
   const [summary, setSummary] = useState<TradeSummary | null>(null);
+  const [targetStockCount, setTargetStockCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +57,7 @@ export default function PlanResult(params: CompassPlanIdProps) {
         setLoading(false);
         return;
       }
-      if (data === null) {
+      if (data === null || data.length === 0) {
         setError("データSimulationResultがありません。");
         setLoading(false);
         return;
@@ -63,27 +65,47 @@ export default function PlanResult(params: CompassPlanIdProps) {
       setSimulationResultHeaders(data);
       setSelectResult(data[0]);
       setLoading(false);
-
-      // summary_jsonが文字列で返ってくる場合とオブジェクトで返ってくる場合の両方に対応します。
-      const summaryData = data[0].summary_json;
-      if (summaryData && typeof summaryData === "string") {
-        try {
-          console.log("summaryData:", JSON.parse(summaryData));
-          setSummary(JSON.parse(summaryData));
-        } catch (e) {
-          console.error("Failed to parse summary_json:", e);
-          setSummary(null); // パース失敗時はnullに設定します。
-        }
-      } else {
-        setSummary(summaryData); // オブジェクトまたはnullの場合はそのまま設定します。
-      }
-      // setAnalysisCondition(planId);
-      // setSummary(dummySummary);
-      setLoading(false);
     };
 
     fetch();
   }, [planId]);
+
+  // selectResultが変更されたときの副作用をまとめる
+  useEffect(() => {
+    if (selectResult === null) {
+      setSummary(null);
+      setTargetStockCount(null);
+      return;
+    }
+
+    // summary_jsonの更新
+    const summaryData = selectResult.summary_json;
+    if (summaryData && typeof summaryData === "string") {
+      try {
+        setSummary(JSON.parse(summaryData));
+      } catch (e) {
+        console.error("Failed to parse summary_json:", e);
+        setSummary(null);
+      }
+    } else {
+      setSummary(summaryData);
+    }
+
+    // 対象銘柄数の取得
+    const fetchStockCount = async () => {
+      const { data, error } = await getResultStockWithNameByResultId(
+        selectResult.id
+      );
+      if (error) {
+        console.error("Failed to fetch stock count:", error);
+        setTargetStockCount(null);
+        return;
+      }
+      setTargetStockCount(data?.length ?? 0);
+    };
+
+    fetchStockCount();
+  }, [selectResult]);
 
   if (loading) {
     return (
@@ -130,7 +152,7 @@ export default function PlanResult(params: CompassPlanIdProps) {
       </div>
       <Card className="mb-8 p-6 bg-white shadow-lg rounded-xl">
         <h2 className="text-xl font-semibold text-gray-700 mb-4">サマリー</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 text-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 text-center">
           <SummaryItem
             label="最終損益 (課税後)"
             value={
@@ -153,6 +175,14 @@ export default function PlanResult(params: CompassPlanIdProps) {
           <SummaryItem
             label="総トレード数"
             value={summary ? summary.total_trades.toLocaleString() : "-"}
+          />
+          <SummaryItem
+            label="対象銘柄数"
+            value={
+              targetStockCount !== null
+                ? targetStockCount.toLocaleString()
+                : "-"
+            }
           />
           <SummaryItem
             label="勝率"

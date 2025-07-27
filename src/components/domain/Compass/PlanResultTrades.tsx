@@ -76,40 +76,31 @@ const PlanResultTrades: React.FC<PlanResultTradesProps> = ({ resultId }) => {
         <Table className="min-w-full bg-white border border-gray-200 rounded-lg">
           <TableHeader className="bg-gray-100">
             <TableRow>
-              <TableHead className="py-3 px-4 text-left text-sm font-semibold text-gray-700">
+              <TableHead className="py-2 px-3 text-left text-sm font-semibold text-gray-700">
                 銘柄
               </TableHead>
-              <TableHead className="py-3 px-4 text-left text-sm font-semibold text-gray-700">
+              <TableHead className="py-2 px-3 text-left text-sm font-semibold text-gray-700">
                 開始日時
               </TableHead>
-              <TableHead className="py-3 px-4 text-right text-sm font-semibold text-gray-700">
-                開始価格
+              <TableHead className="py-2 px-3 text-right text-sm font-semibold text-gray-700">
+                開始価格 / 金額
               </TableHead>
-              <TableHead className="py-3 px-4 text-right text-sm font-semibold text-gray-700">
-                開始金額
-              </TableHead>
-              <TableHead className="py-3 px-4 text-right text-sm font-semibold text-gray-700">
-                最小購入金額
-              </TableHead>
-              <TableHead className="py-3 px-4 text-left text-sm font-semibold text-gray-700">
+              <TableHead className="py-2 px-3 text-left text-sm font-semibold text-gray-700">
                 終了日時
               </TableHead>
-              <TableHead className="py-3 px-4 text-right text-sm font-semibold text-gray-700">
-                終了価格
+              <TableHead className="py-2 px-3 text-right text-sm font-semibold text-gray-700">
+                終了価格 / 金額
               </TableHead>
-              <TableHead className="py-3 px-4 text-right text-sm font-semibold text-gray-700">
-                終了金額
-              </TableHead>
-              <TableHead className="py-3 px-4 text-right text-sm font-semibold text-gray-700">
+              <TableHead className="py-2 px-3 text-right text-sm font-semibold text-gray-700">
                 課税前損益
               </TableHead>
-              <TableHead className="py-3 px-4 text-right text-sm font-semibold text-gray-700">
+              <TableHead className="py-2 px-3 text-right text-sm font-semibold text-gray-700">
                 課税後損益
               </TableHead>
-              <TableHead className="py-3 px-4 text-right text-sm font-semibold text-gray-700">
+              <TableHead className="py-2 px-3 text-right text-sm font-semibold text-gray-700">
                 課税前利益率
               </TableHead>
-              <TableHead className="py-3 px-4 text-left text-sm font-semibold text-gray-700">
+              <TableHead className="py-2 px-3 text-left text-sm font-semibold text-gray-700">
                 アクション
               </TableHead>
             </TableRow>
@@ -119,49 +110,49 @@ const PlanResultTrades: React.FC<PlanResultTradesProps> = ({ resultId }) => {
               resultTrades.map((trade) => (
                 <TableRow
                   key={trade.id}
-                  className="border-b border-gray-100 hover:bg-gray-50"
+                  className="border-b border-gray-100 transition-colors even:bg-gray-100 hover:bg-blue-50"
                 >
-                  <TableCell className="py-3 px-4 text-sm text-gray-800">
+                  <TableCell className="py-2 px-3 text-sm text-gray-800">
                     {`[${trade.stock_code}]${trade.name}`}
                   </TableCell>
 
-                  <TableCell className="py-3 px-4 text-sm text-gray-800">
+                  <TableCell className="py-2 px-3 text-sm text-gray-800">
                     {trade.entry_date
                       ? format(new Date(trade.entry_date), "yyyy/MM/dd")
                       : "-"}
                   </TableCell>
-                  <TableCell className="py-3 px-4 text-sm text-gray-800 text-right">
-                    {trade.entry_close_price
-                      ? `¥${trade.entry_close_price.toLocaleString()}`
-                      : "-"}
+                  <TableCell className="py-2 px-3 text-sm text-gray-800 text-right">
+                    <div>
+                      {trade.entry_close_price
+                        ? `¥${trade.entry_close_price.toLocaleString()}`
+                        : "-"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {trade.entry_amount
+                        ? `(${trade.entry_amount.toLocaleString()})`
+                        : "(-)"}
+                    </div>
                   </TableCell>
-                  <TableCell className="py-3 px-4 text-sm text-gray-800 text-right">
-                    {trade.entry_amount
-                      ? `¥${trade.entry_amount.toLocaleString()}`
-                      : "-"}
-                  </TableCell>
-                  <TableCell className="py-3 px -4 text-sm text-gray-800 text-right">
-                    {trade.entry_amount
-                      ? `¥${trade.entry_amount.toLocaleString()}`
-                      : "-"}
-                  </TableCell>
-                  <TableCell className="py-3 px-4 text-sm text-gray-800">
+
+                  <TableCell className="py-2 px-3 text-sm text-gray-800">
                     {trade.exit_date
                       ? format(new Date(trade.exit_date), "yyyy/MM/dd")
                       : "-"}
                   </TableCell>
-                  <TableCell className="py-3 px-4 text-sm text-gray-800 text-right">
-                    {trade.exit_close_price
-                      ? `¥${trade.exit_close_price.toLocaleString()}`
-                      : "-"}
-                  </TableCell>
-                  <TableCell className="py-3 px-4 text-sm text-gray-800 text-right">
-                    {trade.exit_amount
-                      ? `¥${trade.exit_amount.toLocaleString()}`
-                      : "-"}
+                  <TableCell className="py-2 px-3 text-sm text-gray-800 text-right">
+                    <div>
+                      {trade.exit_close_price
+                        ? `¥${trade.exit_close_price.toLocaleString()}`
+                        : "-"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {trade.exit_amount
+                        ? `(${trade.exit_amount.toLocaleString()})`
+                        : "(-)"}
+                    </div>
                   </TableCell>
                   <TableCell
-                    className={`py-3 px-4 text-sm text-right ${
+                    className={`py-2 px-3 text-sm text-right ${
                       (trade.gross_profit_amount ?? 0) >= 0
                         ? "text-green-600"
                         : "text-red-600"
@@ -170,7 +161,7 @@ const PlanResultTrades: React.FC<PlanResultTradesProps> = ({ resultId }) => {
                     ¥{trade.gross_profit_amount?.toLocaleString() ?? "-"}
                   </TableCell>
                   <TableCell
-                    className={`py-3 px-4 text-sm text-right ${
+                    className={`py-2 px-3 text-sm text-right ${
                       (trade.net_profit_amount ?? 0) >= 0
                         ? "text-green-600"
                         : "text-red-600"
@@ -179,7 +170,7 @@ const PlanResultTrades: React.FC<PlanResultTradesProps> = ({ resultId }) => {
                     ¥{trade.net_profit_amount?.toLocaleString() ?? "-"}
                   </TableCell>
                   <TableCell
-                    className={`py-3 px-4 text-sm text-right ${
+                    className={`py-2 px-3 text-sm text-right ${
                       (trade.gross_profit_rate ?? 0) >= 0
                         ? "text-green-600"
                         : "text-red-600"
@@ -187,7 +178,7 @@ const PlanResultTrades: React.FC<PlanResultTradesProps> = ({ resultId }) => {
                   >
                     {((trade.gross_profit_rate ?? 0) * 100).toFixed(2)}%
                   </TableCell>
-                  <TableCell className="py-3 px-4 text-sm">
+                  <TableCell className="py-2 px-3 text-sm">
                     <Button
                       variant="outline"
                       size="sm"
@@ -207,7 +198,7 @@ const PlanResultTrades: React.FC<PlanResultTradesProps> = ({ resultId }) => {
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={13}
+                  colSpan={9}
                   className="text-center py-4 text-gray-500"
                 >
                   取引履歴はありません。

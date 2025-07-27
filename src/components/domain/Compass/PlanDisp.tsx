@@ -21,10 +21,11 @@ import SignDisp from "@/components/domain/Compass/SignDisp";
 
 interface GeneratePlanResultProps {
   id: string;
+  periodVisible?: boolean;
 }
 
 export default function PlanDisp(props: GeneratePlanResultProps) {
-  const { id } = props;
+  const { id, periodVisible = true } = props;
   const [planData, setPlanData] = useState<PlanDetailsAll | null>(null);
   const [isStockListExpanded, setIsStockListExpanded] = useState(false);
   // const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,32 +42,6 @@ export default function PlanDisp(props: GeneratePlanResultProps) {
     fetch();
   }, [user, id]);
 
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   setIsSubmitting(true);
-  //   setError(null);
-
-  //   try {
-  //     const result = await initiateSimulationAction(Number(id));
-
-  //     if (result.success && result.simulationResultId) {
-  //       // 成功した場合、新しく作成されたシミュレーション結果ページにリダイレクトします
-  //       router.push(`/Compass/Results/${Number(id)}`);
-  //     } else {
-  //       // 失敗した場合、エラーメッセージを表示します
-  //       setError(result.error || "不明なエラーが発生しました。");
-  //     }
-  //   } catch (err) {
-  //     const message =
-  //       err instanceof Error
-  //         ? err.message
-  //         : "クライアント側で予期せぬエラーが発生しました。";
-  //     setError(message);
-  //   } finally {
-  //     setIsSubmitting(false);
-  //   }
-  // };
-
   // 銘柄リストを分割して表示を制御
   const stocks = planData?.stockCodes ?? [];
   const visibleStocks = stocks.slice(0, 10);
@@ -78,15 +53,19 @@ export default function PlanDisp(props: GeneratePlanResultProps) {
       <div className="font-sans flex justify-center items-center min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
         <div className="w-full max-w-2xl shadow-xl rounded-lg border border-gray-200">
           <div className="p-6 space-y-8">
-            <div className="grid grid-cols-[max-content_1fr] gap-4 items-center">
-              <h3 className="text-xl font-semibold text-gray-800 pr-4">
-                期間:
-              </h3>
-              <p className="text-center text-gray-800 bg-gray-100 py-1 rounded-md font-medium whitespace-nowrap">
-                {planData?.simulationPeriod?.start_date ?? "未設定"} ～{" "}
-                {planData?.simulationPeriod?.end_date ?? "未設定"}
-              </p>
-            </div>
+            {periodVisible ? (
+              <div className="grid grid-cols-[max-content_1fr] gap-4 items-center">
+                <h3 className="text-xl font-semibold text-gray-800 pr-4">
+                  期間:
+                </h3>
+                <p className="text-center text-gray-800 bg-gray-100 py-1 rounded-md font-medium whitespace-nowrap">
+                  {planData?.simulationPeriod?.start_date ?? "未設定"} ～{" "}
+                  {planData?.simulationPeriod?.end_date ?? "未設定"}
+                </p>
+              </div>
+            ) : (
+              <div></div>
+            )}
 
             {/* 銘柄選択 */}
             <div className="space-y-2">

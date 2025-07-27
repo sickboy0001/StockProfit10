@@ -48,12 +48,14 @@ interface FetchedPortfolio {
 }
 
 interface planMakeProps {
-  initialPlan?: PlanDetailsAll; // analysis_condition_id を想定
+  initialPlan?: PlanDetailsAll | null; // analysis_condition_id を想定
 }
 
 export default function PlanMake(props: planMakeProps) {
   const [portfolioId, setPortfolioId] = useState<string>(""); // ポートフォリオID
-  const [stockCodes, setStockCodes] = useState<string[]>([]); // 個別銘柄コード (複数)
+  const [stockCodes, setStockCodes] = useState<string[]>(
+    props.initialPlan?.stockCodes?.map((stock) => stock.code) ?? []
+  ); // 個別銘柄コード (複数)
   const [startDate, setStartDate] = useState<Date | undefined>(
     props.initialPlan?.simulationPeriod?.start_date
       ? new Date(props.initialPlan.simulationPeriod.start_date)

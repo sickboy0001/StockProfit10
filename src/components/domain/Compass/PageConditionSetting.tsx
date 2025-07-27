@@ -1,12 +1,12 @@
-import React from "react";
-import PlanMake from "./PlanMake";
+import GeneratePlanResult from "./GeneratePlanResult";
 
-const PageConditionSetting = () => {
-  return (
-    <div>
-      <PlanMake></PlanMake>
-    </div>
-  );
+interface props {
+  id: string;
+}
+
+const PageGeneratePlanResult = (props: props) => {
+  const { id } = props;
+  return <GeneratePlanResult id={id}></GeneratePlanResult>;
 };
 
-export default PageConditionSetting;
+export default PageGeneratePlanResult;

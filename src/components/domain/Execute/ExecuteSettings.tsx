@@ -16,7 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { registerPlanExecutionSetting } from "@/app/actions/Execute/ExecutionActions";
+import {
+  registerPlanExecutionSetting,
+  getExecutionSettingByPlanId,
+} from "@/app/actions/Execute/ExecutionDb";
 
 interface ExecuteProps {
   planId: string;
@@ -40,26 +43,50 @@ const ExecuteSettings = (props: ExecuteProps) => {
 
   // プラン詳細を取得し、フォームの日付を事前入力
   useEffect(() => {
-    // 日付の初期値を設定: 今日から7日間
-    const today = new Date();
-    const sevenDaysLater = new Date();
-    sevenDaysLater.setDate(today.getDate() + 7);
+    const initializeForm = async () => {
+      const numericPlanId = Number(planId);
+      if (isNaN(numericPlanId)) {
+        setError("無効なプランIDです。");
+        return;
+      }
 
-    // YYYY-MM-DD 形式にフォーマット
-    const formatDate = (date: Date) => date.toISOString().split("T")[0];
+      // 1. 既存の実行設定を取得試行
+      const { data: existingSetting, error: fetchError } =
+        await getExecutionSettingByPlanId(numericPlanId);
 
-    setExecutionStartDate(formatDate(today));
-    setExecutionEndDate(formatDate(sevenDaysLater));
+      if (fetchError) {
+        setError(fetchError);
+        // エラーが発生しても、フォールバックして新規作成の準備を続行
+      }
 
-    // プラン詳細を取得してプラン名を設定
-    const fetchPlanName = async () => {
-      const result = await getPlanDetailsAll(Number(planId));
-      // setPlanData(result.data); // PlanDispで使うのでデータ全体を保持
-      setExecutionName(
-        result.data?.plan?.name || `実行設定 - プランID: ${planId}`
-      );
+      if (existingSetting) {
+        // 2. 既存設定があればフォームにセット
+        setExecutionName(existingSetting.name);
+        setExecutionStartDate(existingSetting.start_date);
+        setExecutionEndDate(existingSetting.end_date);
+        setIsAutoEnabled(existingSetting.is_auto_enabled);
+        setSendMailTo(existingSetting.send_mail_to || "");
+      } else {
+        // 3. 既存設定がなければ、新規作成のデフォルト値をセット
+        // 日付の初期値を設定: 今日から7日間
+        const today = new Date();
+        const sevenDaysLater = new Date();
+        sevenDaysLater.setDate(today.getDate() + 7);
+
+        // YYYY-MM-DD 形式にフォーマット
+        const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+        setExecutionStartDate(formatDate(today));
+        setExecutionEndDate(formatDate(sevenDaysLater));
+
+        // プラン詳細を取得してプラン名を設定
+        const result = await getPlanDetailsAll(numericPlanId);
+        setExecutionName(
+          result.data?.plan?.name || `実行設定 - プランID: ${planId}`
+        );
+      }
     };
-    fetchPlanName();
+    initializeForm();
   }, [planId]); // planId が変更されたら再取得
 
   const handleRegisterExecution = async () => {
@@ -97,7 +124,7 @@ const ExecuteSettings = (props: ExecuteProps) => {
       if (result.success && result.executeId) {
         alert(`実行設定が登録されました。実行ID: ${result.executeId}`);
         // 例えば、新しい実行設定の詳細ページにリダイレクト
-        router.push(`/Compass/Executions/${result.executeId}`);
+        router.push(`/Execute/Maintenance`);
       } else {
         setError(result.error || "実行設定の登録に失敗しました。");
       }

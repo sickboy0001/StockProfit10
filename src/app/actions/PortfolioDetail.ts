@@ -493,23 +493,6 @@ export async function addPortfolioStocks(
     return { error: "Unauthorized" };
   }
 
-  // 既存の銘柄数を取得
-  // const { count: existingStockCount, error: countError } = await supabase
-  //   .from("spt_portfolio_stocks")
-  //   .select("*", { count: "exact", head: true })
-  //   .eq("portfolio_id", portfolioId);
-
-  // if (countError) {
-  //   console.log("countError:", countError);
-  //   return { error: `Failed to count existing stocks: ${countError.message}` };
-  // }
-
-  // if ((existingStockCount ?? 0) + stockCodes.length > 50) {
-  //   return {
-  //     error: `ポートフォリオには最大50銘柄まで登録できます。現在${existingStockCount}件、追加しようとしている件数${stockCodes.length}件。`,
-  //   };
-  // }
-
   // ポートフォリオに既に存在する銘柄コードを取得
   const { data: existingStocks, error: existingStocksError } = await supabase
     .from("spt_portfolio_stocks")

@@ -1,12 +1,7 @@
-import GeneratePlanResult from "./GeneratePlanResult";
+import PlanMakeEntry from "./PlanMakeEntry";
 
-interface props {
-  id: string;
-}
-
-const PageGeneratePlanResult = (props: props) => {
-  const { id } = props;
-  return <GeneratePlanResult id={id}></GeneratePlanResult>;
+const PageGeneratePlanResult = () => {
+  return <PlanMakeEntry></PlanMakeEntry>;
 };
 
 export default PageGeneratePlanResult;

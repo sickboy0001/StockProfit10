@@ -43,10 +43,17 @@ export const headerNavItems: NavItem[] = [
     href: "/Portfolio/List",
   },
   {
-    id: "CompassList",
+    id: "Compass",
     type: "link",
-    label: "CompassList",
+    label: "Compass",
     href: "/Compass/Condition/List",
+  },
+  //http://192.168.2.100:3000/Execute/Maintenance
+  {
+    id: "Executes",
+    type: "link",
+    label: "Executes",
+    href: "/Execute/Maintenance",
   },
   {
     id: "menu",

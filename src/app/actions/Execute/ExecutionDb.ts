@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/util/supabase/server";
+import { ExecuteSetting } from "@/types/db/ExecuteSetting";
 
 interface RegisterExecutionResult {
   success: boolean;
@@ -79,6 +80,7 @@ export async function registerPlanExecutionSetting(
           is_auto_enabled: isAutoEnabled,
           is_active: true, // 既存のレコードもアクティブに設定
           send_mail_to: sendMailTo === "" ? null : sendMailTo,
+          updated_at: new Date().toISOString(),
         },
         {
           onConflict: "analysis_condition_id", // planId (analysis_condition_id) が重複した場合
@@ -114,4 +116,68 @@ export async function registerPlanExecutionSetting(
           : "サーバー側で予期せぬエラーが発生しました。",
     };
   }
+}
+
+/**
+ * planId (analysis_condition_id) に紐づく実行設定を取得します。
+ * @param planId 関連付けられる分析条件ID
+ * @returns 実行設定オブジェクト、または見つからない場合は null を含むオブジェクト
+ */
+export async function getExecutionSettingByPlanId(
+  planId: number
+): Promise<{ data: ExecuteSetting | null; error: string | null }> {
+  if (!planId || isNaN(planId)) {
+    return { data: null, error: "プランIDが無効です。" };
+  }
+
+  const supabase = await createClient();
+
+  try {
+    // .maybeSingle() を使うと、対象が0件でもエラーにならずに data が null で返る
+    const { data, error } = await supabase
+      .from("sptce_plan_execution_settings")
+      .select("*")
+      .eq("analysis_condition_id", planId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Supabase 実行設定取得エラー:", error);
+      return {
+        data: null,
+        error: `実行設定の取得に失敗しました: ${error.message}`,
+      };
+    }
+
+    return { data, error: null };
+  } catch (err) {
+    console.error("getExecutionSettingByPlanId の予期せぬエラー:", err);
+    const message =
+      err instanceof Error
+        ? err.message
+        : "サーバー側で予期せぬエラーが発生しました。";
+    return { data: null, error: message };
+  }
+}
+
+/**
+ * すべての実行設定を取得します。
+ * (注: 実行結果（利益率など）はこの関数では取得しません)
+ * @returns 実行設定の配列
+ * @throws エラーが発生した場合
+ */
+export async function getAllExecuteSettings(): Promise<ExecuteSetting[]> {
+  const supabase = await createClient();
+
+  // sptce_plan_execution_settings テーブルからすべてのレコードを取得します。
+  const { data, error } = await supabase
+    .from("sptce_plan_execution_settings")
+    .select(`*`)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    console.error("Supabase 実行設定取得エラー:", error);
+    throw new Error(`実行設定の取得に失敗しました: ${error.message}`);
+  }
+
+  return data || [];
 }

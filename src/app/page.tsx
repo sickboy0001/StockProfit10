@@ -1,18 +1,29 @@
+import { startPageContents } from "@/constants/StartPage";
 import Image from "next/image";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm"; // GFMプラグインをインポート
+
+// 表示したいMarkdownコンテンツ
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          src="/images/title.png"
-          alt="LogImage" // より具体的なaltテキストを推奨
-          width={600} // 数値で指定
-          height={200}
-          priority // ヘッダーのロゴはLCPの候補になるため、priorityを付与
-        />
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center"></footer>
-    </div>
+    // layout.tsxでmain要素が定義されているため、ここではセマンティックな意味でarticleを使用します。
+    // flexとitems-centerでコンテンツを中央揃えにし、gapとpaddingで余白を調整します。
+    <article className="flex flex-col items-center gap-12 py-16">
+      <Image
+        src="/images/title.png"
+        alt="StockProfit10 タイトルロゴ"
+        width={600}
+        height={200}
+        priority
+      />
+
+      {/* proseクラスを適用したコンテナでMarkdownを一度だけレンダリングします */}
+      <article className="frommarkdown">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {startPageContents}
+        </ReactMarkdown>
+      </article>
+    </article>
   );
 }

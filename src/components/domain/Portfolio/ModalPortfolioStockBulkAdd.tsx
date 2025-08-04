@@ -13,13 +13,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { showCustomToast } from "@/components/organisms/CustomToast";
 import { getSptStocksCache } from "@/app/actions/Cache/SptStocks";
 
 interface ModalPortfolioStockBulkAddProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (stockCodes: string[]) => Promise<void>;
+  onSave: (stockCodesString: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -48,36 +47,7 @@ const ModalPortfolioStockBulkAdd: React.FC<ModalPortfolioStockBulkAddProps> = ({
   }, [isOpen, validStockCodes.size]);
 
   const handleSave = () => {
-    // 1. 括弧（<>,「」,()など）で囲まれた4桁または5桁の数字を抽出
-    const bracketRegex = /[<「【『(](\d{4,5})[>」】』)]/g;
-    const bracketMatches = [...stockCodesInput.matchAll(bracketRegex)];
-    const codesFromBrackets = bracketMatches.map((match) => match[1]);
-
-    // 2. 括弧で囲まれた部分を一時的に除去し、残りのテキストからコードを抽出
-    const textForListParsing = stockCodesInput.replace(bracketRegex, " ");
-    const codesFromList = textForListParsing
-      .split(/[\s,、\r\n]+/) // カンマ、スペース、改行などで分割
-      .map((code) => code.trim())
-      .filter((code) => /^\d{4,5}$/.test(code)); // 4桁または5桁の数字のみを抽出
-
-    // 3. 全てのコードを結合し、重複を排除
-    const uniqueCodes = [
-      ...new Set([...codesFromBrackets, ...codesFromList]),
-    ].filter((code) => code.length > 0);
-
-    // 4. spt_stocksに存在する銘柄コードのみにフィルタリング
-    const codes = uniqueCodes.filter((code) => validStockCodes.has(code));
-
-    if (codes.length === 0) {
-      showCustomToast({
-        message: "有効な銘柄コードが見つかりませんでした。",
-        submessage: "入力内容を確認し、実在する銘柄コードを入力してください。",
-        type: "error",
-      });
-      return;
-    }
-
-    onSave(codes);
+    onSave(stockCodesInput);
   };
 
   return (

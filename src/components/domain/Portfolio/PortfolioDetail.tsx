@@ -29,6 +29,8 @@ import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns"; // date-fnsのformatとparseISOをインポート
 import StockCodeSearchInput from "@/components/molecules/StockCodeSearchInput";
 import { Loader2 } from "lucide-react";
+import { insertAppLog } from "@/app/actions/Applog/Action";
+import { getSptStocksCache } from "@/app/actions/Cache/SptStocks";
 
 type PortfolioDetailProps = {
   initialPortfolioDetail: PortfolioDetailData;
@@ -50,6 +52,10 @@ export function PortfolioDetail({
   const [triggerAddStock, setTriggerAddStock] = useState(false); // 銘柄追加トリガー
 
   const [isSaving, setIsSaving] = useState(false); // グローバルなローディング状態
+
+  const [validStockCodes, setValidStockCodes] = useState<Set<string>>(
+    new Set()
+  );
 
   // 銘柄追加ハンドラ
   const handleAddStock = useCallback(async () => {
@@ -90,21 +96,77 @@ export function PortfolioDetail({
     }
   }, [triggerAddStock, newStockInput, handleAddStock]);
 
+  // コンポーネント表示時に有効な銘柄コードをキャッシュから取得
+  useEffect(() => {
+    const fetchValidCodes = async () => {
+      const allStocks = await getSptStocksCache();
+      const codes = new Set(allStocks.map((stock) => stock.code));
+      console.log("Fetched valid stock codes:", codes);
+      setValidStockCodes(codes);
+    };
+    fetchValidCodes();
+  }, []);
+
   // 銘柄まとめて追加ハンドラ
   const handleBulkAddStocks = useCallback(
-    async (stockCodes: string[]) => {
+    async (stockCodesstring: string) => {
       setIsSaving(true);
-      console.log("handleBulkAddStocks:", portfolio.id);
+      // 1. 括弧（<>,「」,()など）で囲まれた4桁または5桁の数字を抽出
+      const bracketRegex = /[<＜「【『(](\d{4,5})[＞>」】』)]/g;
+      const bracketMatches = [...stockCodesstring.matchAll(bracketRegex)];
+      const codesFromBrackets = bracketMatches.map((match) => match[1]);
+
+      // 2. 括弧で囲まれた部分を一時的に除去し、残りのテキストからコードを抽出
+      const textForListParsing = stockCodesstring.replace(bracketRegex, " ");
+      const codesFromList = textForListParsing
+        .split(/[\s,、\r\n]+/) // カンマ、スペース、改行などで分割
+        .map((code) => code.trim())
+        .filter((code) => /^\d{4,5}$/.test(code)); // 4桁または5桁の数字のみを抽出
+
+      // 3. 全てのコードを結合し、重複を排除
+      const uniqueCodes = [
+        ...new Set([...codesFromBrackets, ...codesFromList]),
+      ].filter((code) => code.length > 0);
+
+      // 4. spt_stocksに存在する銘柄コードのみにフィルタリング
+      const stockCodes = uniqueCodes.filter((code) =>
+        validStockCodes.has(code)
+      );
+      console.log("validStockCodes:", validStockCodes);
+      if (stockCodes.length === 0) {
+        insertAppLog({
+          level: "warn",
+          message: `portfolio.id: ${portfolio.id}, not found valid stock codes`,
+          context: undefined,
+          source: "handleBulkAddStocks",
+        });
+        return;
+      }
+      // console.log("handleBulkAddStocks:", portfolio.id);
       try {
         const result = await addPortfolioStocks(portfolio.id, stockCodes);
 
         if (result && typeof result === "object" && "error" in result) {
           alert(`銘柄の追加に失敗しました: ${result.error}`);
         } else {
+          insertAppLog({
+            level: "debug",
+            message: `portfolio.id: ${portfolio.id}, 銘柄の追加: ${stockCodes},stockCodesstring: ${stockCodesstring}`,
+            context: undefined,
+            source: "handleBulkAddStocks",
+          });
+
           // 成功したら画面をリロードして最新の状態を表示
           window.location.reload();
         }
       } catch (e) {
+        insertAppLog({
+          level: "error",
+          message: `portfolio.id: ${portfolio.id},Failed to add stocks in bulk:{e}`,
+          context: undefined,
+          source: "handleBulkAddStocks",
+        });
+
         console.error("Failed to add stocks in bulk:", e);
         alert("銘柄のまとめて追加中に予期せぬエラーが発生しました。");
       } finally {
@@ -114,7 +176,7 @@ export function PortfolioDetail({
         setIsSaving(false);
       }
     },
-    [portfolio.id]
+    [portfolio.id, validStockCodes]
   );
   // ポートフォリオ基本情報の編集保存ハンドラ
   const handleSavePortfolioBasicInfo = async (

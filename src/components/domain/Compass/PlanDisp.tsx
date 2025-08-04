@@ -28,9 +28,6 @@ export default function PlanDisp(props: GeneratePlanResultProps) {
   const { id, periodVisible = true } = props;
   const [planData, setPlanData] = useState<PlanDetailsAll | null>(null);
   const [isStockListExpanded, setIsStockListExpanded] = useState(false);
-  // const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [error, setError] = useState<string | null>(null);
-  // const router = useRouter();
   // フォーム送信ハンドラ
   const { user } = useAuth();
   // console.log("called GeneratePlanResult", id);
@@ -56,7 +53,7 @@ export default function PlanDisp(props: GeneratePlanResultProps) {
             {periodVisible ? (
               <div className="grid grid-cols-[max-content_1fr] gap-4 items-center">
                 <h3 className="text-xl font-semibold text-gray-800 pr-4">
-                  期間:
+                  期間:111
                 </h3>
                 <p className="text-center text-gray-800 bg-gray-100 py-1 rounded-md font-medium whitespace-nowrap">
                   {planData?.simulationPeriod?.start_date ?? "未設定"} ～{" "}
@@ -70,7 +67,7 @@ export default function PlanDisp(props: GeneratePlanResultProps) {
             {/* 銘柄選択 */}
             <div className="space-y-2">
               <h3 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2">
-                銘柄選択
+                銘柄選択 [{stocks.length}件]
               </h3>
               <div className="flex items-end space-x-2">
                 <div className="flex-grow">

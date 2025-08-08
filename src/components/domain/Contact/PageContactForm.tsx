@@ -1,58 +1,39 @@
 "use client"; // クライアントコンポーネント
 
-import { sendEmailAction } from "@/app/actions/send-email/action";
+import { sendEmailActionDirect } from "@/app/actions/send-email/action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
-import { useEffect, useRef } from "react";
-import { useFormState, useFormStatus } from "react-dom";
-
-// Server Actionから型をインポートするのが理想ですが、ここで定義しても動作します
-type ActionState = {
-  error?: string;
-  success?: string;
-};
-
-const initialState: ActionState = {
-  error: undefined,
-  success: undefined,
-};
-
-// 送信ボタンを分離し、フォームの送信状態をuseFormStatusで管理
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button
-      type="submit"
-      disabled={pending}
-      aria-disabled={pending}
-      className="w-full"
-    >
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          送信中...
-        </>
-      ) : (
-        "Send Email"
-      )}
-    </Button>
-  );
-}
+import { useRef, useState } from "react";
 
 export default function PageContactForm() {
   const formRef = useRef<HTMLFormElement>(null);
-  const [state, formAction] = useFormState(sendEmailAction, initialState);
+  const [to, setTo] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [success, setSuccess] = useState<string | undefined>(undefined);
 
-  useEffect(() => {
-    if (state.success) {
-      alert(state.success); // またはトースト通知ライブラリを使用
-      formRef.current?.reset(); // 成功時にフォームをリセット
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(undefined);
+    setSuccess(undefined);
+    const result = await sendEmailActionDirect(to, subject, message);
+    if (result.error) {
+      setError(result.error);
+    } else if (result.success) {
+      setSuccess(result.success);
+      setTo("");
+      setSubject("");
+      setMessage("");
+      formRef.current?.reset();
     }
-  }, [state]);
+    setLoading(false);
+  };
 
   return (
     <div className="mx-auto max-w-md space-y-6 rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
@@ -62,7 +43,7 @@ export default function PageContactForm() {
           We&apos;d love to hear from you. Please fill out the form below.
         </p>
       </div>
-      <form ref={formRef} action={formAction} className="space-y-4">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="to">To</Label>
           <Input
@@ -71,6 +52,9 @@ export default function PageContactForm() {
             name="to"
             placeholder="recipient@example.com"
             required
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            disabled={loading}
           />
         </div>
         <div className="space-y-2">
@@ -81,6 +65,9 @@ export default function PageContactForm() {
             name="subject"
             placeholder="Your subject"
             required
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            disabled={loading}
           />
         </div>
         <div className="space-y-2">
@@ -91,11 +78,26 @@ export default function PageContactForm() {
             placeholder="Your message"
             required
             className="min-h-[120px]"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            disabled={loading}
           />
         </div>
-        <SubmitButton />
-        {state.error && (
-          <p className="text-sm font-medium text-destructive">{state.error}</p>
+        <Button type="submit" disabled={loading} className="w-full">
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              送信中...
+            </>
+          ) : (
+            "Send Email"
+          )}
+        </Button>
+        {error && (
+          <p className="text-sm font-medium text-destructive">{error}</p>
+        )}
+        {success && (
+          <p className="text-sm font-medium text-green-600">{success}</p>
         )}
       </form>
     </div>

@@ -11,7 +11,7 @@ type ActionState = {
   success?: string;
 };
 
-export async function sendEmailAction(
+export async function sendEmailActionFormData(
   prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
@@ -54,6 +54,43 @@ export async function sendEmailAction(
   } catch (err) {
     console.error("Unexpected error:", err);
     // catchしたエラーがErrorインスタンスか確認し、より詳細なメッセージを返します
+    if (err instanceof Error) {
+      return { error: `Internal Server Error: ${err.message}` };
+    }
+    return { error: "An unexpected internal server error occurred." };
+  }
+}
+
+// 直接値を受け取るバージョン
+export async function sendEmailActionDirect(
+  to: string,
+  subject: string,
+  message: string
+): Promise<ActionState> {
+  if (!to || !subject || !message) {
+    return { error: "Missing required fields: to, subject, message" };
+  }
+
+  try {
+    const fromAddress =
+      process.env.RESEND_FROM_ADDRESS ||
+      "Spt-DailyReport <onboarding@resend.dev>";
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
+      to: [to],
+      subject: subject,
+      html: `<p>${message}</p>`,
+    });
+
+    if (error) {
+      console.error("Error sending email:", error);
+      return { error: error.message };
+    }
+
+    console.log("Email sent successfully:", data);
+    return { success: "Email sent successfully!" };
+  } catch (err) {
+    console.error("Unexpected error:", err);
     if (err instanceof Error) {
       return { error: `Internal Server Error: ${err.message}` };
     }

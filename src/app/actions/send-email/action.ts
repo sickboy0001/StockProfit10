@@ -27,7 +27,7 @@ export async function sendEmailActionFormData(
   ) {
     return { error: "Invalid input types. All fields must be strings." };
   }
-
+  // 必須フィールドのチェック
   if (!to || !subject || !message) {
     return { error: "Missing required fields: to, subject, message" };
   }

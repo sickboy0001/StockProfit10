@@ -31,6 +31,8 @@ import StockCodeSearchInput from "@/components/molecules/StockCodeSearchInput";
 import { Loader2 } from "lucide-react";
 import { insertAppLog } from "@/app/actions/Applog/Action";
 import { getSptStocksCache } from "@/app/actions/Cache/SptStocks";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePathname } from "next/navigation";
 
 type PortfolioDetailProps = {
   initialPortfolioDetail: PortfolioDetailData;
@@ -56,6 +58,9 @@ export function PortfolioDetail({
   const [validStockCodes, setValidStockCodes] = useState<Set<string>>(
     new Set()
   );
+
+  const { user } = useAuth();
+  const pathname = usePathname();
 
   // 銘柄追加ハンドラ
   const handleAddStock = useCallback(async () => {
@@ -107,6 +112,26 @@ export function PortfolioDetail({
     fetchValidCodes();
   }, []);
 
+  // ログ記録用の共通関数
+  const logAction = useCallback(
+    (
+      level: "info" | "warn" | "error",
+      source: string,
+      message: string,
+      context?: unknown
+    ) => {
+      insertAppLog({
+        level,
+        message,
+        context,
+        user_id: user?.id,
+        source,
+        path: pathname,
+      });
+    },
+    [user?.id, pathname]
+  );
+
   // 銘柄まとめて追加ハンドラ
   const handleBulkAddStocks = useCallback(
     async (stockCodesstring: string) => {
@@ -134,12 +159,11 @@ export function PortfolioDetail({
       );
       console.log("validStockCodes:", validStockCodes);
       if (stockCodes.length === 0) {
-        insertAppLog({
-          level: "warn",
-          message: `portfolio.id: ${portfolio.id}, not found valid stock codes`,
-          context: undefined,
-          source: "handleBulkAddStocks",
-        });
+        logAction(
+          "warn",
+          "handleBulkAddStocks",
+          `No valid stock codes found from input for portfolio.id: ${portfolio.id}`
+        );
         return;
       }
       // console.log("handleBulkAddStocks:", portfolio.id);
@@ -149,24 +173,35 @@ export function PortfolioDetail({
         if (result && typeof result === "object" && "error" in result) {
           alert(`銘柄の追加に失敗しました: ${result.error}`);
         } else {
-          insertAppLog({
-            level: "debug",
-            message: `portfolio.id: ${portfolio.id}, 銘柄の追加: ${stockCodes},stockCodesstring: ${stockCodesstring}`,
-            context: undefined,
-            source: "handleBulkAddStocks",
-          });
+          const context = {
+            portfolioId: portfolio.id,
+            action: "insert",
+            stockCodes: stockCodes.join(", "),
+          };
+          logAction(
+            "info",
+            "handleBulkAddStocks",
+            `Added ${stockCodes.length} stocks. stockcodeString: ${stockCodesstring}`,
+            context
+          );
+          /*
+            user_id?: string;
+            source?: string;
+            request_id?: string;
+            ip_address?: string;
+            user_agent?: string;
+            path?: string;
+          */
 
           // 成功したら画面をリロードして最新の状態を表示
           window.location.reload();
         }
       } catch (e) {
-        insertAppLog({
-          level: "error",
-          message: `portfolio.id: ${portfolio.id},Failed to add stocks in bulk:{e}`,
-          context: undefined,
-          source: "handleBulkAddStocks",
-        });
-
+        logAction(
+          "error",
+          "handleBulkAddStocks",
+          `Failed to add stocks in bulk for portfolio.id: ${portfolio.id}`
+        );
         console.error("Failed to add stocks in bulk:", e);
         alert("銘柄のまとめて追加中に予期せぬエラーが発生しました。");
       } finally {
@@ -176,7 +211,7 @@ export function PortfolioDetail({
         setIsSaving(false);
       }
     },
-    [portfolio.id, validStockCodes]
+    [portfolio.id, validStockCodes, logAction]
   );
   // ポートフォリオ基本情報の編集保存ハンドラ
   const handleSavePortfolioBasicInfo = async (
@@ -265,10 +300,21 @@ export function PortfolioDetail({
       if (result && typeof result === "object" && "error" in result) {
         alert(`銘柄の削除に失敗しました: ${result.error}`);
       } else {
+        const thisCode = portfolio.stocks.find(
+          (s) => s.id === stockId
+        )?.stockCode;
+
         setPortfolio((prev) => ({
           ...prev,
           stocks: prev.stocks.filter((s) => s.id !== stockId),
         }));
+
+        const context = {
+          portfolioId: portfolio.id,
+          action: "delete",
+          stockCode: thisCode,
+        };
+        logAction("info", "handleDeleteStock", `remove ${thisCode} `, context);
       }
     } catch (e) {
       console.error("Failed to delete stock:", e);

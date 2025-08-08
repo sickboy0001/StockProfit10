@@ -981,9 +981,9 @@ export default function PlanMake(props: planMakeProps) {
                     </Select>
 
                     <ul className="border border-gray-200 rounded-md p-3 space-y-2 bg-gray-50">
-                      {entryConditions.map((cond) => (
+                      {entryConditions.map((cond, index) => (
                         <GenericConditionItem
-                          key={cond.id}
+                          key={`${cond.id}-${index}`}
                           condition={cond}
                           onRemove={handleRemoveEntryCondition}
                           // グループ化されていない条件のみ編集可能にする

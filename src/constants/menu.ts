@@ -55,6 +55,13 @@ export const headerNavItems: NavItem[] = [
     label: "Executes",
     href: "/Execute/Maintenance",
   },
+  //http://192.168.2.100:3000/Manager/applog
+  {
+    id: "Applog",
+    type: "link",
+    label: "Applog",
+    href: "/Manager/applog",
+  },
   {
     id: "menu",
     type: "dropdown",

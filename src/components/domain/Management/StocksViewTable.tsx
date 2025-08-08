@@ -1,8 +1,8 @@
 // components/StockHistoryTable.tsx
 import { PeriodStockView } from "@/app/actions/StocksViewHistory";
-import { format } from "date-fns/format";
+import { formatInTimeZone } from "date-fns-tz";
 import { isValid } from "date-fns/isValid";
-import { parseISO } from "date-fns/parseISO";
+// import { parseISO } from "date-fns/parseISO";
 import React from "react";
 
 interface StockHistoryTableProps {
@@ -17,9 +17,13 @@ const StocksViewTable: React.FC<StockHistoryTableProps> = ({
   // 日付をフォーマットする関数
   const formatDateTime = (dateString: string | null | undefined) => {
     if (!dateString) return "N/A";
-    const date = parseISO(dateString);
+    // AppLogTableと同様に、タイムスタンプ文字列がUTCであることを明示するために
+    // ISO 8601形式に変換してからDateオブジェクトを生成します。
+    // これにより、堅牢なパースが保証されます。
+    // 例: '2023-01-01 10:00:00' -> '2023-01-01T10:00:00Z'
+    const date = new Date(dateString.replace(" ", "T") + "Z");
     if (!isValid(date)) return "無効な日付";
-    return format(date, "yyyy-MM-dd HH:mm:ss");
+    return formatInTimeZone(date, "Asia/Tokyo", "yyyy-MM-dd HH:mm:ss");
   };
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow-sm">

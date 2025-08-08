@@ -1,16 +1,14 @@
 "use server";
 
+import { AppLog } from "@/types/db/applog";
 import { createClient } from "@/util/supabase/server";
-
+import { headers } from "next/headers";
 export interface AppLogProps {
   level: "info" | "error" | "warn" | "debug";
   message: string;
-  context?: Record<string, unknown>;
+  context?: Record<string, unknown> | unknown;
   user_id?: string;
   source?: string;
-  request_id?: string;
-  ip_address?: string;
-  user_agent?: string;
   path?: string;
 }
 
@@ -20,17 +18,29 @@ export interface AppLogResult {
 }
 
 export async function insertAppLog(props: AppLogProps): Promise<AppLogResult> {
-  const { context = {}, source = "server-function", ...rest } = props;
+  const headersList = headers();
+
+  // サーバー側でリクエストヘッダーから情報を取得
+  const ip_address =
+    headersList.get("x-forwarded-for") ?? headersList.get("x-real-ip");
+  const user_agent = headersList.get("user-agent");
+  // Vercelでデプロイしている場合、リクエストIDがヘッダーに含まれます
+  const request_id = headersList.get("x-vercel-id");
+
+  const { context = {}, source = "server-function", ...clientProps } = props;
 
   try {
     const supabase = await createClient();
-    const { error } = await supabase.from("app_logs").insert([
-      {
-        context,
-        source,
-        ...rest,
-      },
-    ]);
+    const logToInsert = {
+      context,
+      source,
+      ...clientProps,
+      ip_address: ip_address ?? undefined,
+      user_agent: user_agent ?? undefined,
+      request_id: request_id ?? undefined,
+    };
+
+    const { error } = await supabase.from("app_logs").insert([logToInsert]);
 
     if (error) {
       console.error("Failed to insert app_log:", error);
@@ -45,3 +55,61 @@ export async function insertAppLog(props: AppLogProps): Promise<AppLogResult> {
     return { success: false, error: errorMessage };
   }
 }
+
+interface GetAppLogsParams {
+  startDate?: string | null;
+  endDate?: string | null;
+  level?: string | null;
+  searchText?: string | null;
+}
+
+export const getAppLogsAction = async ({
+  startDate,
+  endDate,
+  level,
+  searchText,
+}: GetAppLogsParams): Promise<AppLog[] | { error: string }> => {
+  try {
+    const supabase = await createClient();
+    let query = supabase.from("app_logs").select("*");
+
+    // 日付フィルタ
+    if (startDate) {
+      query = query.gte("timestamp", startDate);
+    }
+    if (endDate) {
+      // 終了日はその日の終わりまでを含むように調整
+      const endOfDay = new Date(endDate);
+      endOfDay.setDate(endOfDay.getDate() + 1);
+      query = query.lt("timestamp", endOfDay.toISOString());
+    }
+
+    // レベルフィルタ
+    if (level && level !== "all") {
+      query = query.eq("level", level);
+    }
+
+    // 検索フィルタ（メッセージとコンテキストを対象に）
+    if (searchText) {
+      // データベースの検索機能（例: `ilike`）を使用
+      // 複数の列を対象に検索する場合、PostgreSQLの全文検索機能などを利用するとより効率的です
+      query = query.or(
+        `message.ilike.%${searchText}%,context::text.ilike.%${searchText}%`
+      );
+    }
+
+    query = query.order("timestamp", { ascending: false });
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Supabase fetch error:", error);
+      return { error: error.message };
+    }
+
+    return data as AppLog[];
+  } catch (err) {
+    console.error("Server action error:", err);
+    return { error: "An unexpected error occurred." };
+  }
+};

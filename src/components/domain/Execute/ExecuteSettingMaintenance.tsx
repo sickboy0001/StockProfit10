@@ -188,11 +188,11 @@ const ExecuteSettingMaintenance = () => {
       </h1>
 
       <div className="flex justify-between items-center mb-6">
-        <Link href="/Compass/Condition/Setting">
+        {/* <Link href="/Compass/Condition/Setting">
           <Button className="bg-blue-600 hover:bg-blue-700 text-white">
             新規追加
           </Button>
-        </Link>
+        </Link> */}
         <div className="flex items-center">
           <Label
             htmlFor="show-inactive-plans"

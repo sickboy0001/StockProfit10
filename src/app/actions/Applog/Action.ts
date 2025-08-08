@@ -18,15 +18,13 @@ export interface AppLogResult {
 }
 
 export async function insertAppLog(props: AppLogProps): Promise<AppLogResult> {
-  const headersList = headers();
+  const headersList = await headers();
 
-  // サーバー側でリクエストヘッダーから情報を取得
   const ip_address =
     headersList.get("x-forwarded-for") ?? headersList.get("x-real-ip");
   const user_agent = headersList.get("user-agent");
-  // Vercelでデプロイしている場合、リクエストIDがヘッダーに含まれます
   const request_id = headersList.get("x-vercel-id");
-
+  // ヘッダーからの値を取得し、必要に応じてデフォルト値を設定
   const { context = {}, source = "server-function", ...clientProps } = props;
 
   try {

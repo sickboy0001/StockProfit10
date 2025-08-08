@@ -196,7 +196,7 @@ export function PortfolioDetail({
           // 成功したら画面をリロードして最新の状態を表示
           window.location.reload();
         }
-      } catch (e) {
+      } catch (e: unknown) {
         logAction(
           "error",
           "handleBulkAddStocks",

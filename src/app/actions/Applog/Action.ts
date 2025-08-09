@@ -18,12 +18,21 @@ export interface AppLogResult {
 }
 
 export async function insertAppLog(props: AppLogProps): Promise<AppLogResult> {
-  const headersList = await headers();
-
-  const ip_address =
-    headersList.get("x-forwarded-for") ?? headersList.get("x-real-ip");
-  const user_agent = headersList.get("user-agent");
-  const request_id = headersList.get("x-vercel-id");
+  let ip_address: string | undefined = undefined;
+  let user_agent: string | undefined = undefined;
+  let request_id: string | undefined = undefined;
+  try {
+    const headersList = await headers();
+    ip_address =
+      headersList.get("x-forwarded-for") ??
+      headersList.get("x-real-ip") ??
+      undefined;
+    user_agent = headersList.get("user-agent") ?? undefined;
+    request_id = headersList.get("x-vercel-id") ?? undefined;
+  } catch (e) {
+    // headers()が失敗した場合はundefinedのまま進める
+    console.warn("headers() failed or not available in this context.", e);
+  }
   // ヘッダーからの値を取得し、必要に応じてデフォルト値を設定
   const { context = {}, source = "server-function", ...clientProps } = props;
 

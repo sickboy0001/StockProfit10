@@ -18,7 +18,7 @@ export async function logAction(
   userId?: string,
   path?: string
 ) {
-  console.log(`logaction called [${level}] [${source}] ${message}`);
+  // console.log(`logaction called [${level}] [${source}] ${message}`);
   await insertAppLog({
     level,
     message,
@@ -27,5 +27,5 @@ export async function logAction(
     source,
     path,
   });
-  console.log(`logaction end`);
+  // console.log(`logaction end`);
 }

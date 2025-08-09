@@ -27,6 +27,11 @@ export async function insertAppLog(props: AppLogProps): Promise<AppLogResult> {
   // ヘッダーからの値を取得し、必要に応じてデフォルト値を設定
   const { context = {}, source = "server-function", ...clientProps } = props;
 
+  if (!props.level) {
+    //throw new Error("level is required")
+    console.error("level is required:", props.level);
+  }
+
   try {
     const supabase = await createClient();
     const logToInsert = {

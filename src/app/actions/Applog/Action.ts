@@ -30,9 +30,10 @@ export async function insertAppLog(props: AppLogProps): Promise<AppLogResult> {
   try {
     const supabase = await createClient();
     const logToInsert = {
+      ...clientProps,
+      level: props.level ?? "info", // スプレッドの後ろで必ずlevelを上書き
       context,
       source,
-      ...clientProps,
       ip_address: ip_address ?? undefined,
       user_agent: user_agent ?? undefined,
       request_id: request_id ?? undefined,

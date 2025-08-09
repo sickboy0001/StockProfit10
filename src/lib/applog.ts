@@ -1,3 +1,4 @@
+"use server";
 import { insertAppLog } from "@/app/actions/Applog/Action";
 
 /**
@@ -17,6 +18,7 @@ export function logAction(
   userId?: string,
   path?: string
 ) {
+  console.log(`logaction called [${level}] [${source}] ${message}`);
   insertAppLog({
     level,
     message,
@@ -25,4 +27,5 @@ export function logAction(
     source,
     path,
   });
+  console.log(`logaction end`);
 }

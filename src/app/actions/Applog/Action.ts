@@ -18,6 +18,7 @@ export interface AppLogResult {
 }
 
 export async function insertAppLog(props: AppLogProps): Promise<AppLogResult> {
+  console.log("insertAppLog called");
   let ip_address: string | undefined = undefined;
   let user_agent: string | undefined = undefined;
   let request_id: string | undefined = undefined;
@@ -52,6 +53,8 @@ export async function insertAppLog(props: AppLogProps): Promise<AppLogResult> {
       user_agent: user_agent ?? undefined,
       request_id: request_id ?? undefined,
     };
+
+    console.log(logToInsert);
 
     const { error } = await supabase.from("app_logs").insert([logToInsert]);
 

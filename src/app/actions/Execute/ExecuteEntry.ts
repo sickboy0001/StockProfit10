@@ -19,10 +19,14 @@ interface EntryResult {
 export async function executeEntry(): Promise<EntryResult> {
   // const supabase = await createClient();
 
+  console.log("executeEntry called");
+
   const context = {
     action: "executeEntry",
   };
   logAction("info", "executeEntry", `called CronJob`, context);
+
+  console.log("logAction at executeEntry called");
 
   // 処理が完了したら成功を返す
   const to = "syunjyu0001@gmail.com";
@@ -31,7 +35,9 @@ export async function executeEntry(): Promise<EntryResult> {
     timeZone: "Asia/Tokyo",
   });
   const message = `このメールは定期的に実行されるCronジョブからの確認メールです。\n日本時間: ${nowJST}`;
+  console.log("sendEmailActionDirect start");
   await sendEmailActionDirect(to, subject, message);
+  console.log("sendEmailActionDirect end");
 
   // ここで必要な処理を実装（例: データ取得など）
   // 今はダミーで成功のみ返す

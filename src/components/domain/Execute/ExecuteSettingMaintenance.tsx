@@ -35,6 +35,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { getAllExecuteSettings } from "@/app/actions/Execute/ExecutionDb";
 import { ExecuteSetting } from "@/types/db/ExecuteSetting";
+import { executeEntry } from "@/app/actions/Execute/ExecuteEntry";
 
 /*
           analysis_condition_id: planId,
@@ -112,7 +113,7 @@ const ExecuteSettingMaintenance = () => {
     setRunModalOpen(true);
   };
 
-  const confirmAndRunExecution = () => {
+  const confirmAndRunExecution = async () => {
     if (!settingToRun) return;
 
     console.log("--- 実行オプション ---");
@@ -121,6 +122,8 @@ const ExecuteSettingMaintenance = () => {
     console.log("すべて対象:", isTargetAll);
     console.log("対象送信日時:", targetDate);
     console.log("--------------------");
+
+    await executeEntry();
 
     // モーダルを閉じてStateをリセット
     setRunModalOpen(false);

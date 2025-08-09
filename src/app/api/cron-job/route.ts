@@ -34,9 +34,11 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     if (error instanceof Error) {
+      console.error("Error during cron job execution:");
       console.error(error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     } else {
+      console.error("Unknown error during cron job execution:");
       console.error(String(error));
       return NextResponse.json({ error: "Unknown error" }, { status: 500 });
     }

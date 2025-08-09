@@ -10,7 +10,7 @@ import { insertAppLog } from "@/app/actions/Applog/Action";
  * @param userId ユーザーID（任意）
  * @param path パス（任意）
  */
-export function logAction(
+export async function logAction(
   level: "info" | "warn" | "error",
   source: string,
   message: string,
@@ -19,7 +19,7 @@ export function logAction(
   path?: string
 ) {
   console.log(`logaction called [${level}] [${source}] ${message}`);
-  insertAppLog({
+  await insertAppLog({
     level,
     message,
     context,

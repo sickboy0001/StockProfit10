@@ -7,6 +7,7 @@ import { executeEntry } from "@/app/actions/Execute/ExecuteEntry";
 export async function POST(request: Request) {
   const data = await request.json();
   const { secret } = data;
+  console.log("Cron job no auth started at:", new Date().toISOString());
 
   // 環境変数から認証シークレットキーを取得
   const API_AUTH_SECRET = process.env.API_AUTH_SECRET;

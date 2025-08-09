@@ -1,7 +1,8 @@
 // app/api/cron-job/route.js
 
 import { NextResponse } from "next/server";
-import { sendEmailActionDirect } from "@/app/actions/send-email/action";
+// import { sendEmailActionDirect } from "@/app/actions/send-email/action";
+import { executeEntry } from "@/app/actions/Execute/ExecuteEntry";
 
 export async function POST(request: Request) {
   const data = await request.json();
@@ -24,14 +25,7 @@ export async function POST(request: Request) {
     // - キャッシュのクリア
     // - データの集計処理
 
-    // 処理が完了したら成功を返す
-    const to = "syunjyu0001@gmail.com";
-    const subject = "定期実行の確認メール";
-    const nowJST = new Date().toLocaleString("ja-JP", {
-      timeZone: "Asia/Tokyo",
-    });
-    const message = `このメールは定期的に実行されるCronジョブからの確認メールです。\n日本時間: ${nowJST}`;
-    await sendEmailActionDirect(to, subject, message);
+    await executeEntry();
 
     return NextResponse.json(
       { message: "Cron job executed successfully!" },

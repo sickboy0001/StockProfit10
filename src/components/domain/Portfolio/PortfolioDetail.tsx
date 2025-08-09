@@ -29,10 +29,11 @@ import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns"; // date-fnsのformatとparseISOをインポート
 import StockCodeSearchInput from "@/components/molecules/StockCodeSearchInput";
 import { Loader2 } from "lucide-react";
-import { insertAppLog } from "@/app/actions/Applog/Action";
+// import { insertAppLog } from "@/app/actions/Applog/Action";
 import { getSptStocksCache } from "@/app/actions/Cache/SptStocks";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePathname } from "next/navigation";
+import { logAction } from "@/lib/applog";
 
 type PortfolioDetailProps = {
   initialPortfolioDetail: PortfolioDetailData;
@@ -112,25 +113,30 @@ export function PortfolioDetail({
     fetchValidCodes();
   }, []);
 
-  // ログ記録用の共通関数
-  const logAction = useCallback(
+  // // 共通ログ関数をimportして利用
+  // const logActionCb = useCallback(
+  //   (
+  //     level: "info" | "warn" | "error",
+  //     source: string,
+  //     message: string,
+  //     context?: unknown
+  //   ) => {
+  //     logAction(level, source, message, context, user?.id, pathname);
+  //   },
+  //   [user?.id, pathname]
+  // userId, pathnameを閉じ込めたローカルラッパー
+  const logActionLocal = useCallback(
     (
       level: "info" | "warn" | "error",
       source: string,
       message: string,
       context?: unknown
     ) => {
-      insertAppLog({
-        level,
-        message,
-        context,
-        user_id: user?.id,
-        source,
-        path: pathname,
-      });
+      logAction(level, source, message, context, user?.id, pathname);
     },
     [user?.id, pathname]
   );
+  // );
 
   // 銘柄まとめて追加ハンドラ
   const handleBulkAddStocks = useCallback(
@@ -159,7 +165,7 @@ export function PortfolioDetail({
       );
       console.log("validStockCodes:", validStockCodes);
       if (stockCodes.length === 0) {
-        logAction(
+        logActionLocal(
           "warn",
           "handleBulkAddStocks",
           `No valid stock codes found from input for portfolio.id: ${portfolio.id}`
@@ -178,7 +184,7 @@ export function PortfolioDetail({
             action: "insert",
             stockCodes: stockCodes.join(", "),
           };
-          logAction(
+          logActionLocal(
             "info",
             "handleBulkAddStocks",
             `Added ${stockCodes.length} stocks. stockcodeString: ${stockCodesstring}`,
@@ -197,7 +203,7 @@ export function PortfolioDetail({
           window.location.reload();
         }
       } catch (e: unknown) {
-        logAction(
+        logActionLocal(
           "error",
           "handleBulkAddStocks",
           `Failed to add stocks in bulk for portfolio.id: ${portfolio.id}`
@@ -211,7 +217,7 @@ export function PortfolioDetail({
         setIsSaving(false);
       }
     },
-    [portfolio.id, validStockCodes, logAction]
+    [portfolio.id, validStockCodes, logActionLocal]
   );
   // ポートフォリオ基本情報の編集保存ハンドラ
   const handleSavePortfolioBasicInfo = async (
@@ -314,7 +320,12 @@ export function PortfolioDetail({
           action: "delete",
           stockCode: thisCode,
         };
-        logAction("info", "handleDeleteStock", `remove ${thisCode} `, context);
+        logActionLocal(
+          "info",
+          "handleDeleteStock",
+          `remove ${thisCode} `,
+          context
+        );
       }
     } catch (e) {
       console.error("Failed to delete stock:", e);
